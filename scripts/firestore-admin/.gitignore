@@ -1,0 +1,18 @@
+# IMPORTANT: Never commit service account keys to git!
+serviceAccountKey.json
+serviceAccountKey*.json
+*-firebase-adminsdk-*.json
+
+# Node modules
+node_modules/
+
+# Environment files
+.env
+.env.local
+
+# Backup files
+*.backup.json
+backup/
+
+# Logs
+*.log

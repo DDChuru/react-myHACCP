@@ -31,9 +31,44 @@ yarn-error.*
 *.pem
 
 # local env files
+.env
 .env*.local
+.env.production
+.env.development
 
 # typescript
 *.tsbuildinfo
 
 app-example
+
+# Firebase config (if contains keys)
+firebase.config.js
+firebaseConfig.js
+
+# Android specific
+android-env.sh
+*.aab
+*.apk
+
+# iOS specific
+ios/Pods/
+ios/*.xcworkspace
+
+# Debug and logs
+firebase-debug.log
+*.log
+
+# Testing
+coverage/
+.nyc_output/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Temporary files
+tmp/
+temp/

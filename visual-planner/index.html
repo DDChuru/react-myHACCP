@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visual Planning Output Viewer</title>
+    
+    <!-- Mermaid for diagrams -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    
+    <!-- Marked for Markdown -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    
+    <!-- Highlight.js for code -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/github-dark.min.css">
+    <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 2rem;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .header p {
+            opacity: 0.9;
+        }
+        
+        .layout {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            height: calc(100vh - 200px);
+        }
+        
+        .sidebar {
+            background: #f7f9fc;
+            border-right: 1px solid #e1e8ed;
+            padding: 1rem;
+            overflow-y: auto;
+        }
+        
+        .sidebar h3 {
+            color: #2d3748;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .file-tree {
+            list-style: none;
+        }
+        
+        .file-tree li {
+            padding: 0.5rem;
+            cursor: pointer;
+            border-radius: 6px;
+            margin-bottom: 0.25rem;
+            transition: all 0.2s;
+        }
+        
+        .file-tree li:hover {
+            background: #e1e8ed;
+        }
+        
+        .file-tree li.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .content {
+            padding: 2rem;
+            overflow-y: auto;
+            background: white;
+        }
+        
+        .content h1 {
+            color: #2d3748;
+            margin: 2rem 0 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #e1e8ed;
+        }
+        
+        .content h2 {
+            color: #4a5568;
+            margin: 1.5rem 0 1rem;
+        }
+        
+        .content h3 {
+            color: #718096;
+            margin: 1rem 0 0.5rem;
+        }
+        
+        .content p {
+            line-height: 1.7;
+            color: #4a5568;
+            margin-bottom: 1rem;
+        }
+        
+        .content ul, .content ol {
+            margin-left: 2rem;
+            margin-bottom: 1rem;
+            line-height: 1.8;
+        }
+        
+        .content code {
+            background: #f7f9fc;
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-family: 'Cascadia Code', 'JetBrains Mono', monospace;
+            font-size: 0.9em;
+            color: #e53e3e;
+        }
+        
+        .content pre {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 1.5rem;
+            border-radius: 10px;
+            overflow-x: auto;
+            margin: 1rem 0;
+        }
+        
+        .content pre code {
+            background: transparent;
+            color: inherit;
+            padding: 0;
+        }
+        
+        .mermaid {
+            background: #f7f9fc;
+            padding: 2rem;
+            border-radius: 10px;
+            margin: 1.5rem 0;
+            text-align: center;
+        }
+        
+        .task-list {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 1.5rem;
+            border-radius: 10px;
+            margin: 1.5rem 0;
+        }
+        
+        .task-list h3 {
+            color: white;
+            margin-bottom: 1rem;
+        }
+        
+        .task-list ul {
+            list-style: none;
+            margin-left: 0;
+        }
+        
+        .task-list li {
+            padding: 0.5rem 0;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        .task-list li:before {
+            content: "✓ ";
+            margin-right: 0.5rem;
+            font-weight: bold;
+        }
+        
+        .info-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1.5rem;
+            border-radius: 10px;
+            margin: 1.5rem 0;
+        }
+        
+        .warning-box {
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            color: #2d3748;
+            padding: 1.5rem;
+            border-radius: 10px;
+            margin: 1.5rem 0;
+        }
+        
+        .success-box {
+            background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%);
+            color: #2d3748;
+            padding: 1.5rem;
+            border-radius: 10px;
+            margin: 1.5rem 0;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 4rem;
+            color: #718096;
+        }
+        
+        .loading:after {
+            content: "⏳";
+            font-size: 3rem;
+            animation: spin 2s linear infinite;
+            display: block;
+            margin-top: 1rem;
+        }
+        
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎨 Visual Planning Viewer</h1>
+            <p>Beautiful visualization of Claude's planning and workflow outputs</p>
+        </div>
+        
+        <div class="layout">
+            <aside class="sidebar">
+                <h3>Recent Plans</h3>
+                <ul class="file-tree" id="fileList">
+                    <li class="active" data-file="current">Current Session</li>
+                </ul>
+            </aside>
+            
+            <main class="content" id="content">
+                <div class="loading">
+                    Loading visual output...
+                </div>
+            </main>
+        </div>
+    </div>
+    
+    <script>
+        // Initialize Mermaid
+        mermaid.initialize({ 
+            startOnLoad: true,
+            theme: 'default',
+            themeVariables: {
+                primaryColor: '#667eea',
+                primaryTextColor: '#fff',
+                primaryBorderColor: '#764ba2',
+                lineColor: '#667eea',
+                secondaryColor: '#f7f9fc',
+                tertiaryColor: '#fff'
+            }
+        });
+        
+        // Watch for updates
+        let lastContent = '';
+        
+        async function loadContent() {
+            try {
+                const response = await fetch('/api/visual-output');
+                const data = await response.json();
+                
+                if (data.content && data.content !== lastContent) {
+                    lastContent = data.content;
+                    displayContent(data.content);
+                }
+            } catch (error) {
+                // Server might not be ready yet
+                setTimeout(loadContent, 2000);
+            }
+        }
+        
+        function displayContent(content) {
+            const container = document.getElementById('content');
+            
+            // Parse markdown
+            const html = marked.parse(content);
+            container.innerHTML = html;
+            
+            // Re-initialize Mermaid diagrams
+            mermaid.init(undefined, container.querySelectorAll('.mermaid'));
+            
+            // Highlight code blocks
+            container.querySelectorAll('pre code').forEach((block) => {
+                hljs.highlightBlock(block);
+            });
+            
+            // Add special styling for certain sections
+            container.querySelectorAll('blockquote').forEach((quote) => {
+                quote.className = 'info-box';
+            });
+        }
+        
+        // Start watching for content
+        loadContent();
+        setInterval(loadContent, 1000);
+        
+        // Example content for demonstration
+        const exampleContent = `
+# Feature Planning: User Authentication System
+
+## Overview
+Building a comprehensive authentication system with modern security practices.
+
+\`\`\`mermaid
+graph TD
+    A[User Request] --> B{Authenticated?}
+    B -->|No| C[Login Page]
+    B -->|Yes| D[Dashboard]
+    C --> E[Validate Credentials]
+    E --> F{Valid?}
+    F -->|Yes| D
+    F -->|No| C
+\`\`\`
+
+## Key Components
+
+### 1. Authentication Flow
+- JWT-based authentication
+- Refresh token mechanism
+- Secure password hashing with bcrypt
+
+### 2. Database Schema
+
+\`\`\`mermaid
+erDiagram
+    User ||--o{ Session : has
+    User ||--o{ Role : has
+    Role ||--o{ Permission : contains
+    User {
+        string id
+        string email
+        string password_hash
+        datetime created_at
+    }
+    Session {
+        string token
+        datetime expires_at
+    }
+\`\`\`
+
+## Implementation Tasks
+
+<div class="task-list">
+<h3>Development Checklist</h3>
+<ul>
+<li>Set up authentication middleware</li>
+<li>Implement JWT token generation</li>
+<li>Create login/signup endpoints</li>
+<li>Add password reset functionality</li>
+<li>Implement role-based access control</li>
+</ul>
+</div>
+
+## Code Example
+
+\`\`\`javascript
+// Authentication Middleware
+const authenticate = async (req, res, next) => {
+    const token = req.headers.authorization?.split(' ')[1];
+    
+    if (!token) {
+        return res.status(401).json({ error: 'No token provided' });
+    }
+    
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        req.user = decoded;
+        next();
+    } catch (error) {
+        return res.status(401).json({ error: 'Invalid token' });
+    }
+};
+\`\`\`
+
+<div class="success-box">
+✅ <strong>Ready for Implementation</strong><br>
+All planning documents have been created and the system architecture is defined.
+</div>
+        `;
+        
+        // Display example content initially
+        setTimeout(() => {
+            if (lastContent === '') {
+                displayContent(exampleContent);
+            }
+        }, 1000);
+    </script>
+</body>
+</html>

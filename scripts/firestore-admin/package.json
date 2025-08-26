@@ -1,0 +1,21 @@
+{
+  "name": "firestore-admin-scripts",
+  "version": "1.0.0",
+  "description": "Firestore debugging and maintenance scripts for HACCP app",
+  "scripts": {
+    "setup": "npm install",
+    "crud": "node crud-operations.js",
+    "debug": "node debug-utils.js",
+    "quick": "node quick-scripts.js",
+    "setup-ncr": "node quick-scripts.js setup-ncr",
+    "test-data": "node quick-scripts.js test-data",
+    "stats": "node quick-scripts.js stats",
+    "list": "node crud-operations.js list",
+    "inspect": "node debug-utils.js inspect"
+  },
+  "dependencies": {
+    "cli-table3": "^0.6.5",
+    "dotenv": "^16.3.1",
+    "firebase-admin": "^12.7.0"
+  }
+}

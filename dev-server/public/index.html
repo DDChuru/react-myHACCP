@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visual Development Server - HACCP App</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+</head>
+<body>
+    <div id="app" class="app">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-left">
+                <div class="logo">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span>Visual Dev Server</span>
+                </div>
+                <div class="connection-status" id="connectionStatus">
+                    <div class="status-dot connecting"></div>
+                    <span>Connecting...</span>
+                </div>
+            </div>
+            <div class="header-center">
+                <div class="project-name">HACCP App Development</div>
+            </div>
+            <div class="header-right">
+                <div class="task-counter" id="taskCounter">
+                    <span class="running-tasks">0</span> running
+                    <span class="queued-tasks">0</span> queued
+                </div>
+                <button class="btn-icon" id="clearAllBtn" title="Clear All">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 6h18l-2 13H5L3 6z"/>
+                        <path d="m19 6-1-3H6L5 6"/>
+                        <path d="M10 11v6M14 11v6"/>
+                    </svg>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Sidebar -->
+            <aside class="sidebar">
+                <nav class="sidebar-nav">
+                    <button class="nav-item active" data-panel="agents">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z"/>
+                            <line x1="16" y1="8" x2="2" y2="22"/>
+                            <line x1="17.5" y1="15" x2="9" y2="15"/>
+                        </svg>
+                        <span>Agents</span>
+                    </button>
+                    <button class="nav-item" data-panel="files">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/>
+                            <polyline points="13,2 13,9 20,9"/>
+                        </svg>
+                        <span>Files</span>
+                    </button>
+                    <button class="nav-item" data-panel="terminal">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="4,17 10,11 4,5"/>
+                            <line x1="12" y1="19" x2="20" y2="19"/>
+                        </svg>
+                        <span>Terminal</span>
+                    </button>
+                    <button class="nav-item" data-panel="tasks">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                            <polyline points="14,2 14,8 20,8"/>
+                            <line x1="16" y1="13" x2="8" y2="13"/>
+                            <line x1="16" y1="17" x2="8" y2="17"/>
+                            <polyline points="10,9 9,10 8,9"/>
+                        </svg>
+                        <span>Tasks</span>
+                    </button>
+                </nav>
+            </aside>
+
+            <!-- Left Panel -->
+            <div class="left-panel">
+                <!-- Agents Panel -->
+                <div id="agentsPanel" class="panel active">
+                    <div class="panel-header">
+                        <h3>AI Agents</h3>
+                        <div class="panel-actions">
+                            <button class="btn-sm" id="newTaskBtn">New Task</button>
+                        </div>
+                    </div>
+                    <div class="panel-content">
+                        <div class="agent-controls">
+                            <div class="control-group">
+                                <label>Task Type:</label>
+                                <select id="taskType" class="select">
+                                    <option value="task">Collaborative Task</option>
+                                    <option value="review">Code Review</option>
+                                    <option value="brainstorm">Brainstorm</option>
+                                </select>
+                            </div>
+                            <div class="control-group" id="taskInputGroup">
+                                <label>Task Description:</label>
+                                <textarea id="taskInput" class="textarea" placeholder="Describe what you want the agents to work on..." rows="3"></textarea>
+                            </div>
+                            <div class="control-group" id="codeInputGroup" style="display: none;">
+                                <label>Code to Review:</label>
+                                <textarea id="codeInput" class="textarea" placeholder="Paste code here for review..." rows="8"></textarea>
+                            </div>
+                            <div class="control-group" id="topicInputGroup" style="display: none;">
+                                <label>Brainstorm Topic:</label>
+                                <input id="topicInput" class="input" placeholder="Topic to brainstorm about..." />
+                                <div class="rounds-control">
+                                    <label>Rounds:</label>
+                                    <input id="roundsInput" type="number" class="input-sm" value="3" min="1" max="10" />
+                                </div>
+                            </div>
+                            <button id="startAgentTask" class="btn-primary">Start Agent Task</button>
+                        </div>
+                        
+                        <div class="conversation-area" id="conversationArea">
+                            <div class="conversation-placeholder">
+                                <div class="placeholder-icon">
+                                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                                    </svg>
+                                </div>
+                                <h4>Ready for AI Collaboration</h4>
+                                <p>Start a task to see real-time conversations between Claude and Gemini agents.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Files Panel -->
+                <div id="filesPanel" class="panel">
+                    <div class="panel-header">
+                        <h3>File Explorer</h3>
+                        <div class="panel-actions">
+                            <button class="btn-sm" id="refreshFilesBtn">Refresh</button>
+                        </div>
+                    </div>
+                    <div class="panel-content">
+                        <div class="file-tree" id="fileTree">
+                            <div class="file-tree-loading">
+                                <div class="loading-spinner"></div>
+                                <span>Loading files...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Terminal Panel -->
+                <div id="terminalPanel" class="panel">
+                    <div class="panel-header">
+                        <h3>Terminal</h3>
+                        <div class="panel-actions">
+                            <button class="btn-sm" id="clearTerminalBtn">Clear</button>
+                        </div>
+                    </div>
+                    <div class="panel-content">
+                        <div class="terminal-container">
+                            <div class="terminal-output" id="terminalOutput"></div>
+                            <div class="terminal-input">
+                                <span class="terminal-prompt">$</span>
+                                <input type="text" id="terminalInput" class="terminal-input-field" placeholder="Enter command...">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tasks Panel -->
+                <div id="tasksPanel" class="panel">
+                    <div class="panel-header">
+                        <h3>Task Queue</h3>
+                        <div class="panel-actions">
+                            <button class="btn-sm" id="clearTasksBtn">Clear All</button>
+                        </div>
+                    </div>
+                    <div class="panel-content">
+                        <div class="task-list" id="taskList">
+                            <div class="task-list-empty">
+                                <div class="empty-icon">
+                                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                        <polyline points="14,2 14,8 20,8"/>
+                                        <line x1="16" y1="13" x2="8" y2="13"/>
+                                        <line x1="16" y1="17" x2="8" y2="17"/>
+                                    </svg>
+                                </div>
+                                <p>No tasks in queue</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel -->
+            <div class="right-panel">
+                <div class="panel-tabs">
+                    <button class="tab-btn active" data-tab="editor">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                        </svg>
+                        Editor
+                    </button>
+                    <button class="tab-btn" data-tab="preview">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                            <circle cx="12" cy="12" r="3"/>
+                        </svg>
+                        Preview
+                    </button>
+                    <button class="tab-btn" data-tab="output">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="4,17 10,11 4,5"/>
+                            <line x1="12" y1="19" x2="20" y2="19"/>
+                        </svg>
+                        Output
+                    </button>
+                </div>
+
+                <!-- Editor Tab -->
+                <div id="editorTab" class="tab-content active">
+                    <div class="editor-header">
+                        <div class="file-tabs" id="fileTabs">
+                            <div class="no-file-open">
+                                <span>No file open</span>
+                                <button class="btn-sm" onclick="openFileDialog()">Open File</button>
+                            </div>
+                        </div>
+                        <div class="editor-actions">
+                            <button class="btn-icon" id="saveFileBtn" title="Save" disabled>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                                    <polyline points="17,21 17,13 7,13 7,21"/>
+                                    <polyline points="7,3 7,8 15,8"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="editor-container">
+                        <textarea id="codeEditor" class="code-editor" placeholder="Open a file to start editing..."></textarea>
+                    </div>
+                </div>
+
+                <!-- Preview Tab -->
+                <div id="previewTab" class="tab-content">
+                    <div class="preview-container">
+                        <iframe id="previewFrame" src="about:blank"></iframe>
+                    </div>
+                </div>
+
+                <!-- Output Tab -->
+                <div id="outputTab" class="tab-content">
+                    <div class="output-container">
+                        <div class="output-header">
+                            <h4>System Output</h4>
+                            <button class="btn-sm" id="clearOutputBtn">Clear</button>
+                        </div>
+                        <div class="output-content" id="outputContent">
+                            <div class="output-placeholder">
+                                <p>System output will appear here...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Status Bar -->
+        <footer class="status-bar">
+            <div class="status-left">
+                <span id="currentFile">No file selected</span>
+            </div>
+            <div class="status-center">
+                <span id="serverStatus">Server: Connected</span>
+            </div>
+            <div class="status-right">
+                <span id="cursorPosition">Ln 1, Col 1</span>
+                <span class="separator">|</span>
+                <span id="fileEncoding">UTF-8</span>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="loading-content">
+            <div class="loading-spinner large"></div>
+            <h3>Initializing Development Server</h3>
+            <p>Setting up real-time communication...</p>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.4/socket.io.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/typescript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/css.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/json.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

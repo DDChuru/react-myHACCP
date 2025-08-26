@@ -1,0 +1,92 @@
+[
+  {
+    "id": "critical",
+    "name": "Critical",
+    "level": 1,
+    "color": "#FF0000",
+    "description": "Immediate food safety risk or regulatory violation. Product must be quarantined/destroyed. Operations may need to stop.",
+    "responseTime": "Immediate",
+    "escalationRequired": true,
+    "examples": [
+      "Pathogen detection",
+      "Metal/glass contamination",
+      "Temperature abuse >4 hours",
+      "Allergen mislabeling",
+      "Pest infestation in production"
+    ],
+    "actions": [
+      "Stop production immediately",
+      "Quarantine affected products",
+      "Notify management and QA",
+      "Document with photos",
+      "Initiate product recall if shipped"
+    ]
+  },
+  {
+    "id": "major",
+    "name": "Major",
+    "level": 2,
+    "color": "#FF9800",
+    "description": "Significant risk that could lead to food safety issues. Requires prompt corrective action.",
+    "responseTime": "Within 24 hours",
+    "escalationRequired": true,
+    "examples": [
+      "Temperature deviation 2-4 hours",
+      "Damaged packaging",
+      "Cleaning schedule missed",
+      "PPE violations",
+      "Equipment malfunction"
+    ],
+    "actions": [
+      "Investigate root cause",
+      "Implement temporary controls",
+      "Schedule corrective action",
+      "Increase monitoring frequency",
+      "Retrain if necessary"
+    ]
+  },
+  {
+    "id": "minor",
+    "name": "Minor",
+    "level": 3,
+    "color": "#FFC107",
+    "description": "Low risk issue requiring correction but not immediate threat to food safety.",
+    "responseTime": "Within 7 days",
+    "escalationRequired": false,
+    "examples": [
+      "Documentation incomplete",
+      "Minor cleaning issues",
+      "Labeling formatting",
+      "Non-critical maintenance",
+      "Minor procedural deviation"
+    ],
+    "actions": [
+      "Schedule correction",
+      "Update documentation",
+      "Monitor for recurrence",
+      "Add to maintenance schedule"
+    ]
+  },
+  {
+    "id": "observation",
+    "name": "Observation",
+    "level": 4,
+    "color": "#4CAF50",
+    "description": "Opportunity for improvement. No immediate risk but could prevent future issues.",
+    "responseTime": "Within 30 days",
+    "escalationRequired": false,
+    "examples": [
+      "Process optimization opportunity",
+      "Training suggestions",
+      "Documentation improvements",
+      "Preventive measure recommendations",
+      "Best practice suggestions"
+    ],
+    "actions": [
+      "Document suggestion",
+      "Review in next team meeting",
+      "Consider for continuous improvement",
+      "Track trends"
+    ]
+  }
+]

@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Self-Inspection Flow Diagram</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 40px;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 40px;
+            font-size: 1.2em;
+        }
+        .diagram-container {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+            overflow-x: auto;
+        }
+        .mermaid {
+            text-align: center;
+        }
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 30px;
+            flex-wrap: wrap;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .legend-box {
+            width: 30px;
+            height: 30px;
+            border-radius: 6px;
+        }
+        .screen { background: #e8f5e9; }
+        .database { background: #fff3e0; }
+        .action { background: #e1f5fe; }
+        .decision { background: #fce4ec; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 HACCP Self-Inspection Flow</h1>
+        <p class="subtitle">Complete user journey from creating inspection to completion</p>
+        
+        <div class="diagram-container">
+            <div class="mermaid">
+flowchart TD
+    Start([👤 User Opens App]) --> Auth{Authenticated?}
+    Auth -->|No| Login[🔐 Login Screen]
+    Auth -->|Yes| List[📋 Self-Inspection List<br/>View existing inspections]
+    Login --> List
+    
+    List --> |Tap FAB +| NewInsp[➕ New Inspection]
+    List --> |Tap existing| ViewMode{Status?}
+    
+    ViewMode -->|Completed| ViewOnly[👁️ View Only Mode]
+    ViewMode -->|In Progress| Resume[📝 Resume Inspection]
+    
+    NewInsp --> SelectSite[🏢 Step 1: Select Site<br/>━━━━━━━━━━━<br/>○ Main Facility<br/>● Warehouse<br/>○ Distribution Center]
+    
+    SelectSite --> Details[📝 Step 2: Enter Details<br/>━━━━━━━━━━━<br/>Name: 'Daily Safety Check'<br/>☑ Raise NCRs<br/>☑ Before/After Photos]
+    
+    Details --> |Create| SaveDB[(💾 Firestore<br/>━━━━━━━━<br/>Create Document<br/>Status: 'pending'<br/>Return inspectionId)]
+    
+    SaveDB --> Conduct[🔍 Conduct Inspection<br/>━━━━━━━━━━━<br/>Name • Site • Progress<br/>0 issues found]
+    Resume --> Conduct
+    
+    Conduct --> |FAB +| AddIssue[⚠️ Add Issue Form]
+    Conduct --> |Complete| CheckIssues{Has Issues?}
+    
+    AddIssue --> AreaSelect[📍 Select Area<br/>━━━━━━━━<br/>Modal with Search<br/>• Kitchen ✓<br/>• Freezer<br/>• Storage]
+    
+    AreaSelect --> IssueDetails[📝 Issue Details<br/>━━━━━━━━━<br/>Category: Equipment ▼<br/>Severity: 🔴 Critical ▼<br/>Description: Broken seal...<br/>Assign: John Doe ▼<br/>Due: Tomorrow 📅]
+    
+    IssueDetails --> PhotoOpt{Add Photo?}
+    
+    PhotoOpt -->|Yes| Photo[📸 Capture Photo<br/>━━━━━━━━<br/>Take picture<br/>Add annotations<br/>Store locally]
+    PhotoOpt -->|No| SaveIssue
+    
+    Photo --> SaveIssue[💾 Save Issue]
+    
+    SaveIssue --> UpdateDB[(💾 Firestore<br/>━━━━━━━━<br/>addIssueToInspection()<br/>Update issues[]<br/>Increment count)]
+    
+    UpdateDB --> |Auto-refresh| Conduct
+    
+    CheckIssues -->|Yes| ReviewIssues[📊 Review Issues<br/>━━━━━━━━<br/>2 Critical<br/>1 Major<br/>3 Minor]
+    CheckIssues -->|No| SignPad
+    
+    ReviewIssues --> SignPad[✍️ Signature Pad<br/>━━━━━━━━<br/>Draw signature<br/>Confirm completion]
+    
+    SignPad --> |Save| FinalDB[(💾 Firestore<br/>━━━━━━━━<br/>Status: 'completed'<br/>Signature: base64<br/>CompletedAt: timestamp<br/>CompletedBy: userId)]
+    
+    FinalDB --> Success[✅ Success!<br/>Inspection Complete]
+    Success --> |Navigate| List
+    
+    ViewOnly --> List
+    
+    style Start fill:#e1f5fe,stroke:#0277bd,stroke-width:2px
+    style List fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
+    style NewInsp fill:#f3e5f5,stroke:#6a1b9a,stroke-width:2px
+    style Conduct fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
+    style AddIssue fill:#ffebee,stroke:#c62828,stroke-width:2px
+    style SignPad fill:#e0f2f1,stroke:#00695c,stroke-width:2px
+    style Success fill:#c8e6c9,stroke:#1b5e20,stroke-width:3px
+    
+    style SaveDB fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    style UpdateDB fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    style FinalDB fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    
+    style Auth fill:#fce4ec,stroke:#c2185b,stroke-width:2px
+    style ViewMode fill:#fce4ec,stroke:#c2185b,stroke-width:2px
+    style PhotoOpt fill:#fce4ec,stroke:#c2185b,stroke-width:2px
+    style CheckIssues fill:#fce4ec,stroke:#c2185b,stroke-width:2px
+            </div>
+        </div>
+
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-box screen"></div>
+                <span>Screen/View</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-box database"></div>
+                <span>Database Operation</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-box action"></div>
+                <span>User Action</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-box decision"></div>
+                <span>Decision Point</span>
+            </div>
+        </div>
+
+        <h2 style="margin-top: 40px;">📊 Data Flow Details</h2>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-top: 20px;">
+            <div style="background: #f5f5f5; padding: 20px; border-radius: 8px;">
+                <h3>🆕 Create Inspection</h3>
+                <code style="background: #fff; padding: 10px; display: block; border-radius: 4px; font-size: 12px;">
+{
+  "name": "Daily Safety Check",
+  "site": "Warehouse",
+  "siteId": "site_001",
+  "status": "pending",
+  "issues": [],
+  "issueCount": 0
+}
+                </code>
+            </div>
+            
+            <div style="background: #f5f5f5; padding: 20px; border-radius: 8px;">
+                <h3>⚠️ Add Issue</h3>
+                <code style="background: #fff; padding: 10px; display: block; border-radius: 4px; font-size: 12px;">
+{
+  "id": "issue_1234_abc",
+  "areaId": "kitchen_01",
+  "areaName": "Kitchen",
+  "severity": "Critical",
+  "description": "Broken seal",
+  "responsibleUserId": "user_john"
+}
+                </code>
+            </div>
+            
+            <div style="background: #f5f5f5; padding: 20px; border-radius: 8px;">
+                <h3>✅ Complete</h3>
+                <code style="background: #fff; padding: 10px; display: block; border-radius: 4px; font-size: 12px;">
+{
+  "status": "completed",
+  "completedAt": "timestamp",
+  "completedBy": "userId",
+  "inspectorSignature": "base64",
+  "issueCount": 2
+}
+                </code>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        mermaid.initialize({ 
+            startOnLoad: true,
+            theme: 'default',
+            flowchart: {
+                useMaxWidth: true,
+                htmlLabels: true,
+                curve: 'basis'
+            }
+        });
+    </script>
+</body>
+</html>
