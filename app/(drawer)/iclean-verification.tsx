@@ -1,0 +1,485 @@
+/**
+ * iClean Verification Entry Screen
+ * Entry point with QR scanner and area selection
+ */
+
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  ScrollView,
+  StyleSheet,
+  Alert,
+  Pressable,
+  ActivityIndicator,
+} from 'react-native';
+import {
+  Text,
+  Card,
+  Button,
+  Portal,
+  Modal,
+  Searchbar,
+  Badge,
+  useTheme,
+  Surface,
+  IconButton,
+} from 'react-native-paper';
+import { Camera } from 'expo-camera';
+import { BarCodeScanner } from 'expo-barcode-scanner';
+import { useRouter } from 'expo-router';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '../../firebase';
+import { useAuth } from '../../hooks/useAuth';
+import { VerificationService } from '../../services/iCleanVerificationService';
+import { QRCodeData, LocalVerificationProgress } from '../../types/iCleanVerification';
+
+export default function ICleanVerificationScreen() {
+  const theme = useTheme();
+  const router = useRouter();
+  const { user, profile } = useAuth();
+  
+  // State management
+  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
+  const [showQRScanner, setShowQRScanner] = useState(false);
+  const [showAreaList, setShowAreaList] = useState(false);
+  const [areas, setAreas] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [areaProgress, setAreaProgress] = useState<Map<string, LocalVerificationProgress>>(new Map());
+  
+  // Initialize service
+  const verificationService = new VerificationService(
+    profile?.companyId || '',
+    user?.uid || ''
+  );
+
+  // High contrast colors to address white-cards issue
+  const colors = {
+    background: '#1a1a1a',
+    surface: '#2d2d2d',
+    cardBg: '#333333',
+    text: '#ffffff',
+    textSecondary: '#b3b3b3',
+    border: '#424242',
+    pending: '#757575',
+    pass: '#4caf50',
+    fail: '#f44336',
+    overdue: '#ff5722',
+  };
+
+  useEffect(() => {
+    // Request camera permissions
+    (async () => {
+      const { status } = await Camera.requestCameraPermissionsAsync();
+      setHasPermission(status === 'granted');
+    })();
+    
+    // Load site areas
+    loadSiteAreas();
+  }, []);
+
+  const loadSiteAreas = async () => {
+    if (!profile?.companyId || !profile?.siteId) return;
+    
+    setLoading(true);
+    try {
+      // Fetch site areas from Firestore
+      const areasRef = collection(db, `companies/${profile.companyId}/siteAreas`);
+      const q = query(
+        areasRef,
+        where('siteId', '==', profile.siteId),
+        where('isActive', '==', true)
+      );
+      
+      const snapshot = await getDocs(q);
+      const areasData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      
+      setAreas(areasData);
+      
+      // Load progress for each area
+      const progressMap = new Map();
+      for (const area of areasData) {
+        const progress = await verificationService.getLocalProgress(area.id);
+        if (progress) {
+          progressMap.set(area.id, progress);
+        }
+      }
+      setAreaProgress(progressMap);
+    } catch (error) {
+      console.error('Error loading areas:', error);
+      Alert.alert('Error', 'Failed to load areas');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleQRCodeScanned = ({ data }: { data: string }) => {
+    try {
+      const qrData: QRCodeData = JSON.parse(data);
+      
+      if (qrData.type !== 'area') {
+        Alert.alert('Invalid QR Code', 'This QR code is not for an area');
+        return;
+      }
+      
+      if (qrData.siteId !== profile?.siteId) {
+        Alert.alert('Wrong Site', 'This QR code is for a different site');
+        return;
+      }
+      
+      setShowQRScanner(false);
+      navigateToAreaVerification(qrData.areaId, qrData.areaName);
+    } catch (error) {
+      Alert.alert('Invalid QR Code', 'Could not read QR code data');
+    }
+  };
+
+  const navigateToAreaVerification = (areaId: string, areaName: string) => {
+    router.push({
+      pathname: '/(drawer)/area-verification',
+      params: { areaId, areaName }
+    });
+  };
+
+  const getAreaStats = (areaId: string) => {
+    const progress = areaProgress.get(areaId);
+    if (!progress) return { pending: 0, completed: 0, failed: 0, overdue: 0 };
+    
+    const daily = progress.scheduleGroups.daily;
+    const weekly = progress.scheduleGroups.weekly;
+    const monthly = progress.scheduleGroups.monthly;
+    
+    const allItems = [
+      ...daily.items,
+      ...weekly.items,
+      ...monthly.items
+    ];
+    
+    return {
+      pending: allItems.filter(i => i.status === 'pending').length,
+      completed: allItems.filter(i => i.status === 'pass').length,
+      failed: allItems.filter(i => i.status === 'fail').length,
+      overdue: allItems.filter(i => i.isOverdue).length,
+    };
+  };
+
+  const filteredAreas = areas.filter(area =>
+    area.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  if (hasPermission === null) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.pass} />
+      </View>
+    );
+  }
+
+  return (
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <ScrollView contentContainerStyle={styles.content}>
+        {/* Header Section */}
+        <Surface style={[styles.header, { backgroundColor: colors.surface }]} elevation={2}>
+          <View style={styles.headerContent}>
+            <MaterialCommunityIcons name="clipboard-check" size={32} color={colors.pass} />
+            <View style={styles.headerText}>
+              <Text variant="headlineMedium" style={{ color: colors.text }}>
+                iClean Verification
+              </Text>
+              <Text variant="bodyMedium" style={{ color: colors.textSecondary }}>
+                Verify cleaning and sanitation activities
+              </Text>
+            </View>
+          </View>
+        </Surface>
+
+        {/* Entry Options */}
+        <View style={styles.entrySection}>
+          <Text variant="titleLarge" style={[styles.sectionTitle, { color: colors.text }]}>
+            Select Entry Method
+          </Text>
+          
+          <View style={styles.entryButtons}>
+            <Card
+              style={[styles.entryCard, { backgroundColor: colors.cardBg }]}
+              onPress={() => {
+                if (hasPermission) {
+                  setShowQRScanner(true);
+                } else {
+                  Alert.alert('Permission Required', 'Camera permission is required for QR scanning');
+                }
+              }}
+            >
+              <Card.Content style={styles.entryCardContent}>
+                <MaterialCommunityIcons name="qrcode-scan" size={48} color={colors.pass} />
+                <Text variant="titleMedium" style={{ color: colors.text, marginTop: 8 }}>
+                  Scan QR Code
+                </Text>
+                <Text variant="bodySmall" style={{ color: colors.textSecondary, textAlign: 'center' }}>
+                  Quick area entry
+                </Text>
+              </Card.Content>
+            </Card>
+
+            <Card
+              style={[styles.entryCard, { backgroundColor: colors.cardBg }]}
+              onPress={() => setShowAreaList(!showAreaList)}
+            >
+              <Card.Content style={styles.entryCardContent}>
+                <MaterialCommunityIcons name="format-list-bulleted" size={48} color={theme.colors.primary} />
+                <Text variant="titleMedium" style={{ color: colors.text, marginTop: 8 }}>
+                  Select Area
+                </Text>
+                <Text variant="bodySmall" style={{ color: colors.textSecondary, textAlign: 'center' }}>
+                  Manual selection
+                </Text>
+              </Card.Content>
+            </Card>
+          </View>
+        </View>
+
+        {/* Area List Section */}
+        {showAreaList && (
+          <View style={styles.areaListSection}>
+            <Searchbar
+              placeholder="Search areas..."
+              onChangeText={setSearchQuery}
+              value={searchQuery}
+              style={[styles.searchBar, { backgroundColor: colors.surface }]}
+              inputStyle={{ color: colors.text }}
+              iconColor={colors.textSecondary}
+              placeholderTextColor={colors.textSecondary}
+            />
+
+            {loading ? (
+              <ActivityIndicator size="large" color={colors.pass} style={{ marginTop: 20 }} />
+            ) : (
+              filteredAreas.map((area) => {
+                const stats = getAreaStats(area.id);
+                
+                return (
+                  <Pressable
+                    key={area.id}
+                    onPress={() => navigateToAreaVerification(area.id, area.name)}
+                  >
+                    <Card style={[styles.areaCard, { backgroundColor: colors.cardBg }]}>
+                      <Card.Content>
+                        <View style={styles.areaCardHeader}>
+                          <View style={{ flex: 1 }}>
+                            <Text variant="titleMedium" style={{ color: colors.text }}>
+                              {area.name}
+                            </Text>
+                            <Text variant="bodySmall" style={{ color: colors.textSecondary }}>
+                              {area.type} • Risk Level: {area.riskLevel}
+                            </Text>
+                          </View>
+                          <MaterialCommunityIcons 
+                            name="chevron-right" 
+                            size={24} 
+                            color={colors.textSecondary} 
+                          />
+                        </View>
+                        
+                        <View style={styles.statsRow}>
+                          {stats.overdue > 0 && (
+                            <Badge size={20} style={[styles.badge, { backgroundColor: colors.overdue }]}>
+                              {stats.overdue} Overdue
+                            </Badge>
+                          )}
+                          {stats.pending > 0 && (
+                            <Badge size={20} style={[styles.badge, { backgroundColor: colors.pending }]}>
+                              {stats.pending} Pending
+                            </Badge>
+                          )}
+                          {stats.completed > 0 && (
+                            <Badge size={20} style={[styles.badge, { backgroundColor: colors.pass }]}>
+                              {stats.completed} Complete
+                            </Badge>
+                          )}
+                          {stats.failed > 0 && (
+                            <Badge size={20} style={[styles.badge, { backgroundColor: colors.fail }]}>
+                              {stats.failed} Failed
+                            </Badge>
+                          )}
+                        </View>
+                      </Card.Content>
+                    </Card>
+                  </Pressable>
+                );
+              })
+            )}
+          </View>
+        )}
+      </ScrollView>
+
+      {/* QR Scanner Modal */}
+      <Portal>
+        <Modal
+          visible={showQRScanner}
+          onDismiss={() => setShowQRScanner(false)}
+          contentContainerStyle={styles.modalContainer}
+        >
+          <View style={styles.scannerContainer}>
+            <BarCodeScanner
+              onBarCodeScanned={showQRScanner ? handleQRCodeScanned : undefined}
+              style={StyleSheet.absoluteFillObject}
+            />
+            
+            <View style={styles.scannerOverlay}>
+              <View style={styles.scannerHeader}>
+                <Text variant="titleLarge" style={{ color: '#fff' }}>
+                  Scan Area QR Code
+                </Text>
+                <Text variant="bodyMedium" style={{ color: '#fff', marginTop: 8 }}>
+                  Position QR code within frame
+                </Text>
+              </View>
+              
+              <View style={styles.scannerFrame}>
+                <View style={[styles.corner, styles.topLeft]} />
+                <View style={[styles.corner, styles.topRight]} />
+                <View style={[styles.corner, styles.bottomLeft]} />
+                <View style={[styles.corner, styles.bottomRight]} />
+              </View>
+              
+              <Button
+                mode="contained"
+                onPress={() => setShowQRScanner(false)}
+                style={styles.bypassButton}
+                buttonColor={colors.surface}
+                textColor={colors.text}
+              >
+                Cancel Scan
+              </Button>
+            </View>
+          </View>
+        </Modal>
+      </Portal>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  content: {
+    padding: 16,
+  },
+  header: {
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 24,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  headerText: {
+    marginLeft: 16,
+    flex: 1,
+  },
+  entrySection: {
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    marginBottom: 16,
+    fontWeight: '600',
+  },
+  entryButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  entryCard: {
+    flex: 1,
+    borderRadius: 12,
+  },
+  entryCardContent: {
+    alignItems: 'center',
+    paddingVertical: 24,
+  },
+  areaListSection: {
+    flex: 1,
+  },
+  searchBar: {
+    marginBottom: 16,
+    borderRadius: 8,
+  },
+  areaCard: {
+    marginBottom: 12,
+    borderRadius: 12,
+  },
+  areaCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  badge: {
+    paddingHorizontal: 8,
+  },
+  modalContainer: {
+    flex: 1,
+  },
+  scannerContainer: {
+    flex: 1,
+  },
+  scannerOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 48,
+  },
+  scannerHeader: {
+    alignItems: 'center',
+  },
+  scannerFrame: {
+    width: 250,
+    height: 250,
+    position: 'relative',
+  },
+  corner: {
+    position: 'absolute',
+    width: 40,
+    height: 40,
+    borderColor: '#4caf50',
+    borderWidth: 3,
+  },
+  topLeft: {
+    top: 0,
+    left: 0,
+    borderRightWidth: 0,
+    borderBottomWidth: 0,
+  },
+  topRight: {
+    top: 0,
+    right: 0,
+    borderLeftWidth: 0,
+    borderBottomWidth: 0,
+  },
+  bottomLeft: {
+    bottom: 0,
+    left: 0,
+    borderRightWidth: 0,
+    borderTopWidth: 0,
+  },
+  bottomRight: {
+    bottom: 0,
+    right: 0,
+    borderLeftWidth: 0,
+    borderTopWidth: 0,
+  },
+  bypassButton: {
+    paddingHorizontal: 24,
+  },
+});

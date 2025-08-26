@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "56483628989",
+    "firebase_url": "https://iclean-field-service-4bddd.firebaseio.com",
+    "project_id": "iclean-field-service-4bddd",
+    "storage_bucket": "iclean-field-service-4bddd.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:56483628989:android:650863793197768f",
+        "android_client_info": {
+          "package_name": "com.dachu.myHACCPapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDxTQQHrzdStBfT3xVft6904V0NnyuORIs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

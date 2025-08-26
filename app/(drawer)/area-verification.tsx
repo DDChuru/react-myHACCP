@@ -1,0 +1,459 @@
+/**
+ * Area Verification Screen
+ * Shows schedule tabs and verification items for a selected area
+ */
+
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  View,
+  ScrollView,
+  StyleSheet,
+  Alert,
+  FlatList,
+  RefreshControl,
+  Pressable,
+} from 'react-native';
+import {
+  Text,
+  Card,
+  Button,
+  SegmentedButtons,
+  Surface,
+  Portal,
+  Modal,
+  FAB,
+  Badge,
+  Chip,
+  ProgressBar,
+  useTheme,
+  Switch,
+  Divider,
+} from 'react-native-paper';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useAuth } from '../../hooks/useAuth';
+import { VerificationService } from '../../services/iCleanVerificationService';
+import { 
+  LocalVerificationProgress,
+  AreaItemProgress,
+  ScheduleGroupProgress,
+  STATUS_COLORS,
+  VerificationStatus,
+} from '../../types/iCleanVerification';
+import VerificationItemCard from '../../components/VerificationItemCard';
+import CompleteInspectionModal from '../../components/CompleteInspectionModal';
+
+type ScheduleTab = 'daily' | 'weekly' | 'monthly';
+
+export default function AreaVerificationScreen() {
+  const theme = useTheme();
+  const router = useRouter();
+  const params = useLocalSearchParams();
+  const { user, profile } = useAuth();
+  
+  const areaId = params.areaId as string;
+  const areaName = params.areaName as string;
+  
+  // State management
+  const [activeTab, setActiveTab] = useState<ScheduleTab>('daily');
+  const [progress, setProgress] = useState<LocalVerificationProgress | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [showCompleteModal, setShowCompleteModal] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<AreaItemProgress | null>(null);
+  const [filter, setFilter] = useState<'all' | 'pending' | 'overdue'>('all');
+  
+  // Initialize service
+  const verificationService = new VerificationService(
+    profile?.companyId || '',
+    user?.uid || ''
+  );
+  
+  // High contrast colors
+  const colors = {
+    background: '#1a1a1a',
+    surface: '#2d2d2d',
+    cardBg: '#333333',
+    text: '#ffffff',
+    textSecondary: '#b3b3b3',
+    border: '#424242',
+  };
+
+  useEffect(() => {
+    loadProgress();
+  }, [areaId]);
+
+  const loadProgress = async () => {
+    try {
+      const localProgress = await verificationService.getLocalProgress(areaId);
+      if (localProgress) {
+        setProgress(localProgress);
+      }
+    } catch (error) {
+      console.error('Error loading progress:', error);
+      Alert.alert('Error', 'Failed to load verification data');
+    }
+  };
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadProgress();
+    setRefreshing(false);
+  }, [areaId]);
+
+  const getCurrentScheduleGroup = (): ScheduleGroupProgress | null => {
+    if (!progress) return null;
+    return progress.scheduleGroups[activeTab];
+  };
+
+  const getFilteredItems = (): AreaItemProgress[] => {
+    const group = getCurrentScheduleGroup();
+    if (!group) return [];
+    
+    let items = [...group.items];
+    
+    switch (filter) {
+      case 'pending':
+        items = items.filter(i => i.isDue && i.status === 'pending');
+        break;
+      case 'overdue':
+        items = items.filter(i => i.isOverdue);
+        break;
+    }
+    
+    // Sort by priority: overdue first, then due, then others
+    items.sort((a, b) => {
+      if (a.isOverdue && !b.isOverdue) return -1;
+      if (!a.isOverdue && b.isOverdue) return 1;
+      if (a.isDue && !b.isDue) return -1;
+      if (!a.isDue && b.isDue) return 1;
+      return 0;
+    });
+    
+    return items;
+  };
+
+  const handleVerifyItem = async (item: AreaItemProgress, status: 'pass' | 'fail') => {
+    try {
+      await verificationService.verifyItem(item.areaItemId, status, {
+        siteId: areaId,
+        scheduleId: activeTab,
+      });
+      
+      // Reload progress to show updated status
+      await loadProgress();
+    } catch (error) {
+      console.error('Error verifying item:', error);
+      Alert.alert('Error', 'Failed to save verification');
+    }
+  };
+
+  const handleCompleteInspection = () => {
+    const group = getCurrentScheduleGroup();
+    if (!group) return;
+    
+    // Check if there are unverified daily items
+    const unverifiedDaily = progress?.scheduleGroups.daily.items.filter(
+      i => i.isDue && i.status === 'pending'
+    ) || [];
+    
+    if (unverifiedDaily.length === 0 && activeTab === 'daily') {
+      Alert.alert('All Complete', 'All daily items have been verified');
+      return;
+    }
+    
+    setShowCompleteModal(true);
+  };
+
+  const confirmCompleteInspection = async () => {
+    setShowCompleteModal(false);
+    
+    try {
+      await verificationService.completeInspection(areaId, true);
+      await loadProgress();
+      
+      Alert.alert(
+        'Inspection Complete',
+        'Daily items have been auto-passed and inspection has been saved.',
+        [{ text: 'OK', onPress: () => router.back() }]
+      );
+    } catch (error) {
+      console.error('Error completing inspection:', error);
+      Alert.alert('Error', 'Failed to complete inspection');
+    }
+  };
+
+  const renderProgressHeader = () => {
+    const group = getCurrentScheduleGroup();
+    if (!group) return null;
+    
+    const progressPercentage = group.completionPercentage || 0;
+    
+    return (
+      <Surface style={[styles.progressHeader, { backgroundColor: colors.surface }]} elevation={1}>
+        <View style={styles.progressInfo}>
+          <Text variant="titleMedium" style={{ color: colors.text }}>
+            {areaName}
+          </Text>
+          <Text variant="bodySmall" style={{ color: colors.textSecondary }}>
+            {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} Items
+          </Text>
+        </View>
+        
+        <View style={styles.progressStats}>
+          <View style={styles.statItem}>
+            <Text variant="headlineSmall" style={{ color: colors.text }}>
+              {group.completedCount}/{group.totalCount}
+            </Text>
+            <Text variant="bodySmall" style={{ color: colors.textSecondary }}>
+              Completed
+            </Text>
+          </View>
+          
+          {group.failedCount > 0 && (
+            <View style={styles.statItem}>
+              <Text variant="headlineSmall" style={{ color: STATUS_COLORS.fail.background }}>
+                {group.failedCount}
+              </Text>
+              <Text variant="bodySmall" style={{ color: colors.textSecondary }}>
+                Failed
+              </Text>
+            </View>
+          )}
+          
+          <View style={styles.statItem}>
+            <Text variant="headlineSmall" style={{ color: STATUS_COLORS.pass.background }}>
+              {Math.round(progressPercentage)}%
+            </Text>
+            <Text variant="bodySmall" style={{ color: colors.textSecondary }}>
+              Complete
+            </Text>
+          </View>
+        </View>
+        
+        <ProgressBar
+          progress={progressPercentage / 100}
+          color={progressPercentage === 100 ? STATUS_COLORS.pass.background : theme.colors.primary}
+          style={styles.progressBar}
+        />
+      </Surface>
+    );
+  };
+
+  const renderScheduleTabs = () => (
+    <View style={styles.tabsContainer}>
+      <SegmentedButtons
+        value={activeTab}
+        onValueChange={(value) => setActiveTab(value as ScheduleTab)}
+        buttons={[
+          {
+            value: 'daily',
+            label: 'Daily',
+            icon: () => (
+              <View style={styles.tabIconContainer}>
+                <MaterialCommunityIcons name="calendar-today" size={20} color={colors.text} />
+                {progress?.scheduleGroups.daily.items.filter(i => i.isOverdue).length > 0 && (
+                  <Badge size={12} style={styles.tabBadge}>!</Badge>
+                )}
+              </View>
+            ),
+          },
+          {
+            value: 'weekly',
+            label: 'Weekly',
+            icon: () => (
+              <View style={styles.tabIconContainer}>
+                <MaterialCommunityIcons name="calendar-week" size={20} color={colors.text} />
+                {progress?.scheduleGroups.weekly.items.filter(i => i.isOverdue).length > 0 && (
+                  <Badge size={12} style={styles.tabBadge}>!</Badge>
+                )}
+              </View>
+            ),
+          },
+          {
+            value: 'monthly',
+            label: 'Monthly',
+            icon: () => (
+              <View style={styles.tabIconContainer}>
+                <MaterialCommunityIcons name="calendar-month" size={20} color={colors.text} />
+                {progress?.scheduleGroups.monthly.items.filter(i => i.isOverdue).length > 0 && (
+                  <Badge size={12} style={styles.tabBadge}>!</Badge>
+                )}
+              </View>
+            ),
+          },
+        ]}
+        style={{ backgroundColor: colors.surface }}
+      />
+      
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterChips}>
+        <Chip
+          selected={filter === 'all'}
+          onPress={() => setFilter('all')}
+          style={[styles.filterChip, { backgroundColor: filter === 'all' ? theme.colors.primary : colors.surface }]}
+          textStyle={{ color: colors.text }}
+        >
+          All Items
+        </Chip>
+        <Chip
+          selected={filter === 'pending'}
+          onPress={() => setFilter('pending')}
+          style={[styles.filterChip, { backgroundColor: filter === 'pending' ? theme.colors.primary : colors.surface }]}
+          textStyle={{ color: colors.text }}
+        >
+          Pending
+        </Chip>
+        <Chip
+          selected={filter === 'overdue'}
+          onPress={() => setFilter('overdue')}
+          style={[styles.filterChip, { backgroundColor: filter === 'overdue' ? STATUS_COLORS.overdue.background : colors.surface }]}
+          textStyle={{ color: colors.text }}
+        >
+          Overdue
+        </Chip>
+      </ScrollView>
+    </View>
+  );
+
+  const renderItem = ({ item }: { item: AreaItemProgress }) => (
+    <VerificationItemCard
+      item={item}
+      onVerify={(status) => handleVerifyItem(item, status)}
+      onAddPhoto={() => {
+        setSelectedItem(item);
+        router.push({
+          pathname: '/(drawer)/capture-photo',
+          params: { itemId: item.areaItemId, itemName: item.itemName }
+        });
+      }}
+      onViewSCI={() => {
+        if (item.sciReference) {
+          router.push({
+            pathname: '/(drawer)/sci-viewer',
+            params: { sciId: item.sciReference, itemName: item.itemName }
+          });
+        }
+      }}
+      colorScheme={STATUS_COLORS[item.status as VerificationStatus]}
+      isOffline={progress?.syncStatus !== 'synced'}
+    />
+  );
+
+  const items = getFilteredItems();
+
+  return (
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      {renderProgressHeader()}
+      {renderScheduleTabs()}
+      
+      <FlatList
+        data={items}
+        renderItem={renderItem}
+        keyExtractor={(item) => item.areaItemId}
+        contentContainerStyle={styles.listContent}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+        }
+        ListEmptyComponent={
+          <View style={styles.emptyContainer}>
+            <MaterialCommunityIcons 
+              name="checkbox-marked-circle-outline" 
+              size={64} 
+              color={STATUS_COLORS.pass.background} 
+            />
+            <Text variant="titleMedium" style={{ color: colors.text, marginTop: 16 }}>
+              {filter === 'all' ? 'No items scheduled' : `No ${filter} items`}
+            </Text>
+            <Text variant="bodyMedium" style={{ color: colors.textSecondary, marginTop: 8 }}>
+              {filter === 'all' 
+                ? 'Items will appear based on their schedule'
+                : 'Try changing the filter to see more items'}
+            </Text>
+          </View>
+        }
+      />
+      
+      {/* Complete Inspection FAB - Only show for daily tab */}
+      {activeTab === 'daily' && items.length > 0 && (
+        <FAB
+          icon="check-all"
+          label="Complete Inspection"
+          onPress={handleCompleteInspection}
+          style={[styles.fab, { backgroundColor: STATUS_COLORS.pass.background }]}
+          color="#fff"
+        />
+      )}
+      
+      {/* Complete Inspection Modal */}
+      <CompleteInspectionModal
+        visible={showCompleteModal}
+        onConfirm={confirmCompleteInspection}
+        onCancel={() => setShowCompleteModal(false)}
+        dailyItems={{
+          manual: progress?.scheduleGroups.daily.items.filter(i => i.status !== 'pending') || [],
+          toAutoPass: progress?.scheduleGroups.daily.items.filter(i => i.isDue && i.status === 'pending') || [],
+        }}
+        weeklyItems={progress?.scheduleGroups.weekly.items || []}
+        monthlyItems={progress?.scheduleGroups.monthly.items || []}
+      />
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  progressHeader: {
+    padding: 16,
+  },
+  progressInfo: {
+    marginBottom: 16,
+  },
+  progressStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: 16,
+  },
+  statItem: {
+    alignItems: 'center',
+  },
+  progressBar: {
+    height: 8,
+    borderRadius: 4,
+  },
+  tabsContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+  },
+  tabIconContainer: {
+    position: 'relative',
+  },
+  tabBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: '#ff5722',
+  },
+  filterChips: {
+    marginTop: 12,
+    marginBottom: 8,
+  },
+  filterChip: {
+    marginRight: 8,
+  },
+  listContent: {
+    padding: 16,
+    paddingBottom: 100,
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 48,
+  },
+  fab: {
+    position: 'absolute',
+    margin: 16,
+    right: 0,
+    bottom: 0,
+  },
+});
