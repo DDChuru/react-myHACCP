@@ -34,17 +34,6 @@
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }
-      ],
-      [
-        "expo-build-properties",
-        {
-          "android": {
-            "compileSdkVersion": 34,
-            "targetSdkVersion": 34,
-            "buildToolsVersion": "34.0.0",
-            "minSdkVersion": 24
-          }
-        }
       ]
     ],
     "experiments": {
@@ -53,7 +42,6 @@
     "updates": {
       "enabled": false
     },
-    "runtimeVersion": "1.0.0",
     "extra": {
       "router": {},
       "eas": {

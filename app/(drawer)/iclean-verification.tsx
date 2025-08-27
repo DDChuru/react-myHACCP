@@ -24,8 +24,10 @@ import {
   Surface,
   IconButton,
 } from 'react-native-paper';
-import { Camera } from 'expo-camera';
-import { BarCodeScanner } from 'expo-barcode-scanner';
+import { Platform } from 'react-native';
+// Camera modules temporarily disabled - barcode scanner needs reinstall
+const Camera = null; // Platform.OS !== 'web' ? require('expo-camera').Camera : null;
+const BarCodeScanner = null; // Platform.OS !== 'web' ? require('expo-barcode-scanner').BarCodeScanner : null;
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { collection, query, where, getDocs } from 'firebase/firestore';
@@ -69,11 +71,16 @@ export default function ICleanVerificationScreen() {
   };
 
   useEffect(() => {
-    // Request camera permissions
-    (async () => {
-      const { status } = await Camera.requestCameraPermissionsAsync();
-      setHasPermission(status === 'granted');
-    })();
+    // Request camera permissions (only on native)
+    if (Platform.OS !== 'web' && Camera) {
+      (async () => {
+        const { status } = await Camera.requestCameraPermissionsAsync();
+        setHasPermission(status === 'granted');
+      })();
+    } else if (Platform.OS === 'web') {
+      // On web, we can't use camera for QR scanning
+      setHasPermission(false);
+    }
     
     // Load site areas
     loadSiteAreas();
@@ -324,10 +331,26 @@ export default function ICleanVerificationScreen() {
           contentContainerStyle={styles.modalContainer}
         >
           <View style={styles.scannerContainer}>
-            <BarCodeScanner
-              onBarCodeScanned={showQRScanner ? handleQRCodeScanned : undefined}
-              style={StyleSheet.absoluteFillObject}
-            />
+            {Platform.OS === 'web' ? (
+              <View style={styles.webFallback}>
+                <MaterialCommunityIcons 
+                  name="qrcode-scan" 
+                  size={48} 
+                  color={colors.textSecondary} 
+                />
+                <Text style={styles.webFallbackText}>
+                  QR scanning is not available on web.
+                </Text>
+                <Text style={styles.webFallbackText}>
+                  Please enter the area code manually.
+                </Text>
+              </View>
+            ) : BarCodeScanner ? (
+              <BarCodeScanner
+                onBarCodeScanned={showQRScanner ? handleQRCodeScanned : undefined}
+                style={StyleSheet.absoluteFillObject}
+              />
+            ) : null}
             
             <View style={styles.scannerOverlay}>
               <View style={styles.scannerHeader}>
@@ -439,6 +462,19 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: 48,
+  },
+  webFallback: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#000',
+    padding: 32,
+  },
+  webFallbackText: {
+    color: '#999',
+    fontSize: 14,
+    marginTop: 16,
+    textAlign: 'center',
   },
   scannerHeader: {
     alignItems: 'center',

@@ -20,16 +20,20 @@ import { SCIDocument } from '../../../types/sci';
 export default function SCIDocumentListScreen() {
   const theme = useTheme();
   const router = useRouter();
-  const { documents, loadDocuments, isLoading, imageQueue, isSyncing, syncImageQueue } = useSCI();
+  const { documents, loadDocuments, isLoading, imageQueue, isSyncing, syncImageQueue, selectDocument } = useSCI();
   
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedArea, setSelectedArea] = useState<string>('all');
   const [refreshing, setRefreshing] = useState(false);
   const [refreshKey] = useState(Math.random()); // Force refresh
 
-  // Load documents on mount
+  // Load documents on mount (only if we have a user)
   useEffect(() => {
-    loadDocuments();
+    // Check if user is authenticated before loading
+    const { auth } = require('../../../firebase');
+    if (auth.currentUser) {
+      loadDocuments();
+    }
   }, []);
 
   // Get unique areas from all documents
@@ -68,6 +72,9 @@ export default function SCIDocumentListScreen() {
   // Navigate to document viewer
   const navigateToDocument = (document: SCIDocument) => {
     console.log('[SCI] Navigating to document:', document.id, document.documentNumber);
+    // First select the document in context
+    selectDocument(document);
+    // Then navigate
     router.push({
       pathname: '/(drawer)/sci/viewer',
       params: { id: document.id }
@@ -149,7 +156,7 @@ export default function SCIDocumentListScreen() {
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" />
         <Text variant="bodyLarge" style={styles.loadingText}>
-          Loading REAL SCI documents (v4.25)...
+          Loading SCI documents from Firestore...
         </Text>
       </View>
     );
@@ -157,6 +164,13 @@ export default function SCIDocumentListScreen() {
 
   return (
     <View style={styles.container}>
+      {/* Debug info */}
+      <View style={styles.debugBar}>
+        <Text style={styles.debugText}>
+          Total documents: {documents.length} | Filtered: {filteredDocuments.length}
+        </Text>
+      </View>
+      
       {/* Header with search and filters */}
       <Surface style={styles.header} elevation={1}>
         <Searchbar
@@ -263,6 +277,15 @@ export default function SCIDocumentListScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  debugBar: {
+    backgroundColor: '#FFE0B2',
+    padding: 8,
+    alignItems: 'center',
+  },
+  debugText: {
+    fontSize: 12,
+    color: '#E65100',
   },
   loadingContainer: {
     flex: 1,

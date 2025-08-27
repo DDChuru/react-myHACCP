@@ -5,7 +5,7 @@
  * for the iCleanVerification feature.
  */
 
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import Storage from '../utils/storage';
 import { 
   collection, 
   doc, 
@@ -38,7 +38,7 @@ import {
 /**
  * Local Cache Status Tracking System
  * 
- * This service manages the progressive status tracking using AsyncStorage
+ * This service manages the progressive status tracking using Storage
  * and provides real-time status updates with color coding for the UI.
  */
 export class VerificationService implements IVerificationService {
@@ -55,13 +55,13 @@ export class VerificationService implements IVerificationService {
   // ============================================================================
 
   /**
-   * Get local verification progress from AsyncStorage
+   * Get local verification progress from Storage
    * This is the primary source for UI status display
    */
   async getLocalProgress(areaId: string): Promise<LocalVerificationProgress | null> {
     try {
       const key = `${CACHE_KEYS.PROGRESS}${areaId}`;
-      const data = await AsyncStorage.getItem(key);
+      const data = await Storage.getItem(key);
       
       if (!data) {
         // Initialize new progress if none exists
@@ -113,13 +113,13 @@ export class VerificationService implements IVerificationService {
   }
 
   /**
-   * Update local progress in AsyncStorage
+   * Update local progress in Storage
    */
   async updateLocalProgress(areaId: string, progress: LocalVerificationProgress): Promise<void> {
     try {
       const key = `${CACHE_KEYS.PROGRESS}${areaId}`;
       progress.lastModified = Date.now();
-      await AsyncStorage.setItem(key, JSON.stringify(progress));
+      await Storage.setItem(key, JSON.stringify(progress));
       
       // Trigger UI update through event emitter or state management
       this.notifyUIUpdate(areaId, progress);
@@ -419,11 +419,11 @@ export class VerificationService implements IVerificationService {
    * Sync offline verifications to Firestore
    */
   async syncOfflineVerifications(): Promise<void> {
-    const keys = await AsyncStorage.getAllKeys();
+    const keys = await Storage.getAllKeys();
     const progressKeys = keys.filter(k => k.startsWith(CACHE_KEYS.PROGRESS));
     
     for (const key of progressKeys) {
-      const progressData = await AsyncStorage.getItem(key);
+      const progressData = await Storage.getItem(key);
       if (!progressData) continue;
       
       const progress = JSON.parse(progressData) as LocalVerificationProgress;
@@ -431,7 +431,7 @@ export class VerificationService implements IVerificationService {
       if (progress.offlineQueue.length === 0) continue;
       
       progress.syncStatus = 'syncing';
-      await AsyncStorage.setItem(key, JSON.stringify(progress));
+      await Storage.setItem(key, JSON.stringify(progress));
       
       // Process queue in batches
       const batchSize = SYNC_CONFIG.BATCH_SIZE;
@@ -458,7 +458,7 @@ export class VerificationService implements IVerificationService {
       }
       
       progress.syncStatus = progress.offlineQueue.length === 0 ? 'synced' : 'error';
-      await AsyncStorage.setItem(key, JSON.stringify(progress));
+      await Storage.setItem(key, JSON.stringify(progress));
     }
   }
 
@@ -619,17 +619,17 @@ export class VerificationService implements IVerificationService {
 
   async clearLocalProgress(areaId: string): Promise<void> {
     const key = `${CACHE_KEYS.PROGRESS}${areaId}`;
-    await AsyncStorage.removeItem(key);
+    await Storage.removeItem(key);
   }
 
   async getQueuedVerifications(): Promise<OfflineVerification[]> {
-    const keys = await AsyncStorage.getAllKeys();
+    const keys = await Storage.getAllKeys();
     const progressKeys = keys.filter(k => k.startsWith(CACHE_KEYS.PROGRESS));
     
     let allQueued: OfflineVerification[] = [];
     
     for (const key of progressKeys) {
-      const data = await AsyncStorage.getItem(key);
+      const data = await Storage.getItem(key);
       if (data) {
         const progress = JSON.parse(data) as LocalVerificationProgress;
         allQueued = [...allQueued, ...progress.offlineQueue];

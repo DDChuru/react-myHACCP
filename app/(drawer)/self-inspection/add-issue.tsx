@@ -25,7 +25,8 @@ import { useNotifications } from '../../../hooks/useNotifications';
 import { useSync } from '../../../hooks/useSync';
 import { useOffline } from '../../../hooks/useOffline';
 import * as ImagePicker from 'expo-image-picker';
-import DateTimePicker from '@react-native-community/datetimepicker';
+// DateTimePicker removed - use Paper components instead
+// import DateTimePicker from '@react-native-community/datetimepicker';
 import ImageAnnotator from '../../../components/ImageAnnotator';
 import AreaPicker from '../../../components/AreaPicker';
 import { addIssueToInspection } from '../../../services/selfInspectionService';
@@ -750,14 +751,16 @@ export default function AddIssueScreen() {
             </Button>
 
             {showDatePicker && (
-              <DateTimePicker
-                value={proposedDate}
-                mode="date"
-                display="default"
-                minimumDate={new Date()}
-                onChange={(event, date) => {
+              {/* DateTimePicker removed - using TextInput as replacement */}
+              <TextInput
+                label="Select Date"
+                value={proposedDate.toLocaleDateString()}
+                mode="outlined"
+                style={styles.input}
+                onFocus={() => {
+                  // TODO: Implement date picker modal
+                  Alert.alert('Date Picker', 'Native date picker removed. Enter date manually or implement Paper DatePicker.');
                   setShowDatePicker(false);
-                  if (date) setProposedDate(date);
                 }}
               />
             )}

@@ -17,9 +17,11 @@ import { doc, updateDoc, serverTimestamp, getDoc } from 'firebase/firestore';
 import { db } from '../../../firebase';
 import { useAuth } from '../../../hooks/useAuth';
 import * as ImagePicker from 'expo-image-picker';
-import DateTimePicker from '@react-native-community/datetimepicker';
+// DateTimePicker removed - use Paper components instead
+// import DateTimePicker from '@react-native-community/datetimepicker';
 import ImageAnnotator from '../../../components/ImageAnnotator';
-import SignatureCapture from '../../../components/SignatureCapture';
+// SignatureCapture removed - needs replacement
+// import SignatureCapture from '../../../components/SignatureCapture';
 
 interface AfterImage {
   uri: string;
@@ -379,14 +381,16 @@ export default function CorrectiveActionScreen() {
               Completion Date: {completionDate.toLocaleDateString()}
             </Button>
             
+            {/* DateTimePicker removed - using TextInput as replacement */}
             {showDatePicker && (
-              <DateTimePicker
-                value={completionDate}
-                mode="date"
-                display="default"
-                onChange={(event, date) => {
+              <TextInput
+                label="Completion Date"
+                value={completionDate.toLocaleDateString()}
+                mode="outlined"
+                style={styles.input}
+                onFocus={() => {
+                  Alert.alert('Date Picker', 'Native date picker removed. Enter date manually.');
                   setShowDatePicker(false);
-                  if (date) setCompletionDate(date);
                 }}
               />
             )}
@@ -482,6 +486,7 @@ export default function CorrectiveActionScreen() {
       </View>
 
       {/* Signature Modal */}
+      {/* SignatureCapture removed - needs replacement
       <SignatureCapture
         visible={showSignature}
         onDismiss={() => setShowSignature(false)}
@@ -489,7 +494,7 @@ export default function CorrectiveActionScreen() {
         title="Responsible Person Signature"
         description="Sign to confirm corrective action completion"
         existingSignature={userSignature || undefined}
-      />
+      /> */}
     </ScrollView>
   );
 }

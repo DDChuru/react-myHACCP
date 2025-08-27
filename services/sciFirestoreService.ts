@@ -16,7 +16,7 @@ import { SCIDocument, ImageFieldType } from '../types/sci';
 // Firestore configuration
 const COMPANY_ID = '2XTSaqxU41zCTBIVJeXb'; // Envirowize
 const MCS_CATEGORY_ID = 'JX1ckleMoG3aOpOeaonO'; // Master Cleaning Schedule
-const SCI_CATEGORY_ID = 'inxcJO4M5LI7sGZtOyl4'; // Standard Cleaning Instruction - but might be wrong!
+const SCI_CATEGORY_ID = 'inxcJO4M5LI7sGZtOyl4'; // Standard Cleaning Instruction
 
 export class SCIFirestoreService {
   private static instance: SCIFirestoreService;
@@ -100,12 +100,19 @@ export class SCIFirestoreService {
       
       // Now query for what we think is SCI
       console.log('[Firestore] Looking for categoryId:', SCI_CATEGORY_ID);
+      
+      // Let's try fetching ALL documents without filter first to see total count
+      const allDocsQuery = collection(db, collectionPath);
+      const allDocsSnap = await getDocs(allDocsQuery);
+      console.log('[Firestore] Total documents in collection:', allDocsSnap.size);
+      
+      // Now filter for SCI
       const q = query(
         collection(db, collectionPath),
         where('categoryId', '==', SCI_CATEGORY_ID)
       );
       const querySnapshot = await getDocs(q);
-      console.log('[Firestore] Query returned', querySnapshot.size, 'documents');
+      console.log('[Firestore] Query returned', querySnapshot.size, 'SCI documents');
       
       const documents: SCIDocument[] = [];
       

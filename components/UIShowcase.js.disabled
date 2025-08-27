@@ -25,9 +25,10 @@ import {
   Text,
   useTheme,
 } from 'react-native-paper';
-import { LineChart, BarChart, PieChart } from 'react-native-chart-kit';
-import { Calendar } from 'react-native-calendars';
-import LottieView from 'lottie-react-native';
+// Removed native dependencies - need replacements
+// import { LineChart, BarChart, PieChart } from 'react-native-chart-kit';
+// import { Calendar } from 'react-native-calendars';
+// import LottieView from 'lottie-react-native';
 import { haccpStyles } from '../theme/paperTheme';
 
 const { width } = Dimensions.get('window');

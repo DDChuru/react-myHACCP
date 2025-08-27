@@ -21,7 +21,8 @@ import { collection, getDocs, serverTimestamp, doc, getDoc } from 'firebase/fire
 import { db } from '../../../firebase';
 import { useAuth } from '../../../hooks/useAuth';
 import { useOffline } from '../../../hooks/useOffline';
-import SignatureCapture from '../../../components/SignatureCapture';
+// SignatureCapture removed - needs replacement
+// import SignatureCapture from '../../../components/SignatureCapture';
 import { getSelfInspection, updateSelfInspection, startInspection } from '../../../services/selfInspectionService';
 
 interface Issue {
@@ -425,15 +426,15 @@ export default function ConductInspectionScreen() {
         label="Add Issue"
       />
 
-      {/* Signature Modal */}
-      <SignatureCapture
+      {/* Signature Modal - SignatureCapture removed, needs replacement */}
+      {/* <SignatureCapture
         visible={showSignature}
         onDismiss={() => setShowSignature(false)}
         onSave={handleSignatureSave}
         title="Inspector Signature"
         description="Please sign to confirm this inspection"
         existingSignature={userSignature || undefined}
-      />
+      /> */}
     </>
   );
 }

@@ -1,4 +1,4 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import Storage from '../utils/storage';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage, db } from '../firebase';
 import { doc, updateDoc, getDoc } from 'firebase/firestore';
@@ -54,7 +54,7 @@ class ImageUploadQueueService {
       };
 
       queue.push(pendingUpload);
-      await AsyncStorage.setItem(IMAGE_UPLOAD_QUEUE_KEY, JSON.stringify(queue));
+      await Storage.setItem(IMAGE_UPLOAD_QUEUE_KEY, JSON.stringify(queue));
       
       console.log(`📸 Queued image for upload: ${params.uploadName}`);
     } catch (error) {
@@ -68,7 +68,7 @@ class ImageUploadQueueService {
    */
   async getQueue(): Promise<PendingImageUpload[]> {
     try {
-      const queueJson = await AsyncStorage.getItem(IMAGE_UPLOAD_QUEUE_KEY);
+      const queueJson = await Storage.getItem(IMAGE_UPLOAD_QUEUE_KEY);
       return queueJson ? JSON.parse(queueJson) : [];
     } catch (error) {
       console.error('Error getting image upload queue:', error);
@@ -185,7 +185,7 @@ class ImageUploadQueueService {
   private async removeFromQueue(itemId: string): Promise<void> {
     const queue = await this.getQueue();
     const filtered = queue.filter(item => item.id !== itemId);
-    await AsyncStorage.setItem(IMAGE_UPLOAD_QUEUE_KEY, JSON.stringify(filtered));
+    await Storage.setItem(IMAGE_UPLOAD_QUEUE_KEY, JSON.stringify(filtered));
   }
 
   /**
@@ -196,7 +196,7 @@ class ImageUploadQueueService {
     const index = queue.findIndex(q => q.id === item.id);
     if (index !== -1) {
       queue[index] = item;
-      await AsyncStorage.setItem(IMAGE_UPLOAD_QUEUE_KEY, JSON.stringify(queue));
+      await Storage.setItem(IMAGE_UPLOAD_QUEUE_KEY, JSON.stringify(queue));
     }
   }
 
@@ -206,13 +206,13 @@ class ImageUploadQueueService {
   private async moveToFailedQueue(item: PendingImageUpload): Promise<void> {
     const failedQueueKey = '@failed_image_uploads';
     try {
-      const failedJson = await AsyncStorage.getItem(failedQueueKey);
+      const failedJson = await Storage.getItem(failedQueueKey);
       const failed = failedJson ? JSON.parse(failedJson) : [];
       failed.push({
         ...item,
         failedAt: Date.now()
       });
-      await AsyncStorage.setItem(failedQueueKey, JSON.stringify(failed));
+      await Storage.setItem(failedQueueKey, JSON.stringify(failed));
     } catch (error) {
       console.error('Error moving to failed queue:', error);
     }
@@ -230,7 +230,7 @@ class ImageUploadQueueService {
    * Clear all pending uploads
    */
   async clearQueue(): Promise<void> {
-    await AsyncStorage.removeItem(IMAGE_UPLOAD_QUEUE_KEY);
+    await Storage.removeItem(IMAGE_UPLOAD_QUEUE_KEY);
     console.log('🗑️ Cleared image upload queue');
   }
 }

@@ -1,4 +1,5 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
+import Storage from '../utils/storage';
 import NetInfo from '@react-native-community/netinfo';
 import { 
   enableNetwork, 
@@ -9,7 +10,7 @@ import {
 import { db } from '../firebase';
 import { imageUploadQueue } from './imageUploadQueue';
 
-// Keys for AsyncStorage
+// Keys for Storage
 const OFFLINE_QUEUE_KEY = '@offline_queue';
 const PENDING_INSPECTIONS_KEY = '@pending_inspections';
 const PENDING_ISSUES_KEY = '@pending_issues';
@@ -48,6 +49,11 @@ class OfflineService {
    * Initialize Firebase offline persistence
    */
   private async initializeOfflinePersistence() {
+    // Skip persistence on web SSR
+    if (Platform.OS === 'web' && typeof window === 'undefined') {
+      return;
+    }
+    
     try {
       // Enable offline persistence for Firestore
       await enableIndexedDbPersistence(db, {
@@ -71,6 +77,11 @@ class OfflineService {
    * Setup network connectivity listener
    */
   private setupNetworkListener() {
+    // Skip NetInfo on web SSR
+    if (Platform.OS === 'web' && typeof window === 'undefined') {
+      return;
+    }
+    
     NetInfo.addEventListener(state => {
       const wasOffline = !this.isOnline;
       this.isOnline = state.isConnected ?? false;
@@ -111,7 +122,7 @@ class OfflineService {
       };
 
       queue.push(newItem);
-      await AsyncStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(queue));
+      await Storage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(queue));
 
       console.log(`📥 Queued offline operation: ${item.type}/${item.action}`);
       
@@ -141,7 +152,7 @@ class OfflineService {
     try {
       const pendingInspections = await this.getPendingInspections();
       pendingInspections[item.id] = item.data;
-      await AsyncStorage.setItem(PENDING_INSPECTIONS_KEY, JSON.stringify(pendingInspections));
+      await Storage.setItem(PENDING_INSPECTIONS_KEY, JSON.stringify(pendingInspections));
     } catch (error) {
       console.error('Error storing pending inspection:', error);
     }
@@ -157,7 +168,7 @@ class OfflineService {
         pendingIssues[item.data.inspectionId] = [];
       }
       pendingIssues[item.data.inspectionId].push(item.data);
-      await AsyncStorage.setItem(PENDING_ISSUES_KEY, JSON.stringify(pendingIssues));
+      await Storage.setItem(PENDING_ISSUES_KEY, JSON.stringify(pendingIssues));
     } catch (error) {
       console.error('Error storing pending issue:', error);
     }
@@ -168,7 +179,7 @@ class OfflineService {
    */
   async getOfflineQueue(): Promise<OfflineQueueItem[]> {
     try {
-      const queueJson = await AsyncStorage.getItem(OFFLINE_QUEUE_KEY);
+      const queueJson = await Storage.getItem(OFFLINE_QUEUE_KEY);
       return queueJson ? JSON.parse(queueJson) : [];
     } catch (error) {
       console.error('Error getting offline queue:', error);
@@ -181,7 +192,7 @@ class OfflineService {
    */
   async getPendingInspections(): Promise<Record<string, any>> {
     try {
-      const json = await AsyncStorage.getItem(PENDING_INSPECTIONS_KEY);
+      const json = await Storage.getItem(PENDING_INSPECTIONS_KEY);
       return json ? JSON.parse(json) : {};
     } catch (error) {
       console.error('Error getting pending inspections:', error);
@@ -194,7 +205,7 @@ class OfflineService {
    */
   async getPendingIssues(): Promise<Record<string, any[]>> {
     try {
-      const json = await AsyncStorage.getItem(PENDING_ISSUES_KEY);
+      const json = await Storage.getItem(PENDING_ISSUES_KEY);
       return json ? JSON.parse(json) : {};
     } catch (error) {
       console.error('Error getting pending issues:', error);
@@ -290,7 +301,7 @@ class OfflineService {
   private async removeFromQueue(itemId: string): Promise<void> {
     const queue = await this.getOfflineQueue();
     const filtered = queue.filter(item => item.id !== itemId);
-    await AsyncStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(filtered));
+    await Storage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(filtered));
   }
 
   /**
@@ -299,13 +310,13 @@ class OfflineService {
   private async moveToDeadLetterQueue(item: OfflineQueueItem): Promise<void> {
     const deadLetterKey = '@dead_letter_queue';
     try {
-      const deadLetterJson = await AsyncStorage.getItem(deadLetterKey);
+      const deadLetterJson = await Storage.getItem(deadLetterKey);
       const deadLetter = deadLetterJson ? JSON.parse(deadLetterJson) : [];
       deadLetter.push({
         ...item,
         movedAt: Date.now()
       });
-      await AsyncStorage.setItem(deadLetterKey, JSON.stringify(deadLetter));
+      await Storage.setItem(deadLetterKey, JSON.stringify(deadLetter));
       console.warn(`⚠️ Moved item ${item.id} to dead letter queue after ${item.retryCount} retries`);
     } catch (error) {
       console.error('Error moving to dead letter queue:', error);
@@ -319,7 +330,7 @@ class OfflineService {
     try {
       const current = await this.getSyncStatus();
       const updated = { ...current, ...updates };
-      await AsyncStorage.setItem(SYNC_STATUS_KEY, JSON.stringify(updated));
+      await Storage.setItem(SYNC_STATUS_KEY, JSON.stringify(updated));
     } catch (error) {
       console.error('Error updating sync status:', error);
     }
@@ -330,7 +341,7 @@ class OfflineService {
    */
   async getSyncStatus(): Promise<SyncStatus> {
     try {
-      const json = await AsyncStorage.getItem(SYNC_STATUS_KEY);
+      const json = await Storage.getItem(SYNC_STATUS_KEY);
       const stored = json ? JSON.parse(json) : {};
       const queue = await this.getOfflineQueue();
       
@@ -358,7 +369,7 @@ class OfflineService {
    */
   async clearOfflineData(): Promise<void> {
     try {
-      await AsyncStorage.multiRemove([
+      await Storage.multiRemove([
         OFFLINE_QUEUE_KEY,
         PENDING_INSPECTIONS_KEY,
         PENDING_ISSUES_KEY,

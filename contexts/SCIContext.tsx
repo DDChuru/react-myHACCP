@@ -125,17 +125,19 @@ export const SCIProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   // Load SCI documents from Firestore
   const loadDocuments = async () => {
     const timer = new PerfTimer('Load SCI Documents');
+    
+    // Don't try to load if no user is logged in
+    const user = auth.currentUser;
+    if (!user) {
+      console.log('[SCIContext] No user logged in, skipping document load');
+      setIsLoading(false);
+      return;
+    }
+    
     setIsLoading(true);
     
     try {
-      const user = auth.currentUser;
       debug.log('Current user:', user?.email);
-      
-      if (!user) {
-        debug.error('No authenticated user');
-        Alert.alert('Error', 'You must be logged in to view documents');
-        return;
-      }
 
       // Try to fetch real documents from Firestore
       try {

@@ -1,7 +1,7 @@
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import { Platform } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import Storage from '../utils/storage';
 import { doc, updateDoc, collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
 
@@ -117,8 +117,8 @@ class NotificationService {
         notificationsEnabled: true
       });
 
-      // Also save to AsyncStorage for offline access
-      await AsyncStorage.setItem('pushToken', token);
+      // Also save to Storage for offline access
+      await Storage.setItem('pushToken', token);
     } catch (error) {
       console.error('Error saving push token:', error);
     }
@@ -181,7 +181,7 @@ class NotificationService {
       
       // Keep only last 50 notifications
       const trimmed = notifications.slice(0, 50);
-      await AsyncStorage.setItem('notifications', JSON.stringify(trimmed));
+      await Storage.setItem('notifications', JSON.stringify(trimmed));
     } catch (error) {
       console.error('Error storing notification:', error);
     }
@@ -189,7 +189,7 @@ class NotificationService {
 
   async getStoredNotifications() {
     try {
-      const stored = await AsyncStorage.getItem('notifications');
+      const stored = await Storage.getItem('notifications');
       return stored ? JSON.parse(stored) : [];
     } catch (error) {
       console.error('Error getting stored notifications:', error);
@@ -203,7 +203,7 @@ class NotificationService {
       const updated = notifications.map(n => 
         n.id === notificationId ? { ...n, read: true } : n
       );
-      await AsyncStorage.setItem('notifications', JSON.stringify(updated));
+      await Storage.setItem('notifications', JSON.stringify(updated));
       await this.updateBadgeCount();
     } catch (error) {
       console.error('Error marking notification as read:', error);
@@ -214,7 +214,7 @@ class NotificationService {
     try {
       const notifications = await this.getStoredNotifications();
       const updated = notifications.map(n => ({ ...n, read: true }));
-      await AsyncStorage.setItem('notifications', JSON.stringify(updated));
+      await Storage.setItem('notifications', JSON.stringify(updated));
       await this.setBadgeCount(0);
     } catch (error) {
       console.error('Error marking all as read:', error);
@@ -224,7 +224,7 @@ class NotificationService {
   // Badge management
   async loadBadgeCount() {
     try {
-      const count = await AsyncStorage.getItem('badgeCount');
+      const count = await Storage.getItem('badgeCount');
       this.badgeCount = count ? parseInt(count) : 0;
       await Notifications.setBadgeCountAsync(this.badgeCount);
     } catch (error) {
@@ -240,7 +240,7 @@ class NotificationService {
   async setBadgeCount(count: number) {
     try {
       this.badgeCount = count;
-      await AsyncStorage.setItem('badgeCount', count.toString());
+      await Storage.setItem('badgeCount', count.toString());
       await Notifications.setBadgeCountAsync(count);
     } catch (error) {
       console.error('Error setting badge count:', error);
