@@ -750,8 +750,8 @@ export default function AddIssueScreen() {
               Due: {proposedDate.toLocaleDateString()}
             </Button>
 
+            {/* DateTimePicker removed - using TextInput as replacement */}
             {showDatePicker && (
-              {/* DateTimePicker removed - using TextInput as replacement */}
               <TextInput
                 label="Select Date"
                 value={proposedDate.toLocaleDateString()}
