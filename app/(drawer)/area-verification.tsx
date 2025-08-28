@@ -66,6 +66,7 @@ export default function AreaVerificationScreen() {
   const [showSCIModal, setShowSCIModal] = useState(false);
   const [selectedSCIId, setSelectedSCIId] = useState<string | null>(null);
   const [selectedItemName, setSelectedItemName] = useState<string>('');
+  const [fabOpen, setFabOpen] = useState(false);
   
   // Initialize service
   const verificationService = new VerificationService(
@@ -226,6 +227,40 @@ export default function AreaVerificationScreen() {
     setShowCompleteModal(true);
   };
 
+  const handleQuickPassAll = async () => {
+    const pendingItems = getFilteredItems().filter(i => i.status === 'pending');
+    
+    Alert.alert(
+      'Pass All Pending Items?',
+      `This will mark ${pendingItems.length} items as passed.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Pass All', 
+          onPress: async () => {
+            setFabOpen(false);
+            // Pass all pending items
+            for (const item of pendingItems) {
+              await handleVerifyItem(item, 'pass', 'Batch verified');
+            }
+            Alert.alert('Success', `${pendingItems.length} items marked as passed`);
+          },
+          style: 'destructive'
+        }
+      ]
+    );
+  };
+
+  const handleBatchPhotoCapture = () => {
+    setFabOpen(false);
+    Alert.alert(
+      'Batch Photo Capture',
+      'This feature will allow you to quickly capture photos for multiple items.',
+      [{ text: 'OK' }]
+    );
+    // TODO: Implement batch photo capture workflow
+  };
+
   const confirmCompleteInspection = async () => {
     setShowCompleteModal(false);
     
@@ -233,10 +268,26 @@ export default function AreaVerificationScreen() {
       await verificationService.completeInspection(areaId, true);
       await loadProgress();
       
+      // Show success but stay on screen for user to continue with weekly/monthly
       Alert.alert(
-        'Inspection Complete',
-        'Daily items have been auto-passed and inspection has been saved.',
-        [{ text: 'OK', onPress: () => router.back() }]
+        'Daily Inspection Complete ✅',
+        'Daily items have been auto-passed. You can now verify weekly or monthly items.',
+        [
+          { 
+            text: 'Continue Verifying', 
+            onPress: () => {
+              // Switch to weekly tab if daily is complete
+              if (activeTab === 'daily') {
+                setActiveTab('weekly');
+              }
+            }
+          },
+          { 
+            text: 'Return to Areas', 
+            onPress: () => router.back(),
+            style: 'cancel'
+          }
+        ]
       );
     } catch (error) {
       console.error('Error completing inspection:', error);
@@ -433,14 +484,46 @@ export default function AreaVerificationScreen() {
         }
       />
       
-      {/* Complete Inspection FAB - Only show for daily tab */}
+      {/* Complete Inspection FAB - Show when there are pending items */}
       {activeTab === 'daily' && items.length > 0 && (
         <FAB
           icon="check-all"
-          label="Complete Inspection"
+          label={`Complete ${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} Inspection`}
           onPress={handleCompleteInspection}
-          style={[styles.fab, { backgroundColor: STATUS_COLORS.pass.background }]}
+          style={[styles.fab, { 
+            backgroundColor: progress?.scheduleGroups[activeTab].completedCount === progress?.scheduleGroups[activeTab].totalCount 
+              ? STATUS_COLORS.pass.background 
+              : '#ff9800' 
+          }]}
           color="#fff"
+        />
+      )}
+      
+      {/* Quick Actions FAB Group for Weekly/Monthly */}
+      {activeTab !== 'daily' && items.filter(i => i.status === 'pending').length > 0 && (
+        <FAB.Group
+          open={fabOpen}
+          icon={fabOpen ? 'close' : 'lightning-bolt'}
+          actions={[
+            {
+              icon: 'check-all',
+              label: 'Pass All Pending',
+              onPress: () => handleQuickPassAll(),
+              color: STATUS_COLORS.pass.background,
+            },
+            {
+              icon: 'camera-burst',
+              label: 'Batch Photo Capture',
+              onPress: () => handleBatchPhotoCapture(),
+              color: '#2196f3',
+            },
+          ]}
+          onStateChange={({ open }) => setFabOpen(open)}
+          onPress={() => setFabOpen(!fabOpen)}
+          visible={true}
+          style={styles.fabGroup}
+          color="#fff"
+          fabStyle={{ backgroundColor: '#2196f3' }}
         />
       )}
       
@@ -525,5 +608,8 @@ const styles = StyleSheet.create({
     margin: 16,
     right: 0,
     bottom: 0,
+  },
+  fabGroup: {
+    paddingBottom: 50,
   },
 });
