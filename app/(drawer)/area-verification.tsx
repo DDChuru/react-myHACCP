@@ -284,7 +284,10 @@ export default function AreaVerificationScreen() {
           },
           { 
             text: 'Return to Areas', 
-            onPress: () => router.back(),
+            onPress: () => {
+              // Navigate explicitly to iclean-verification instead of using back()
+              router.replace('/(drawer)/iclean-verification');
+            },
             style: 'cancel'
           }
         ]
@@ -454,6 +457,23 @@ export default function AreaVerificationScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* Breadcrumb Navigation */}
+      <Surface style={[styles.breadcrumb, { backgroundColor: colors.surface }]} elevation={1}>
+        <Pressable 
+          style={styles.breadcrumbButton}
+          onPress={() => router.replace('/(drawer)/iclean-verification')}
+        >
+          <MaterialCommunityIcons name="chevron-left" size={20} color={colors.text} />
+          <Text variant="labelMedium" style={{ color: colors.text }}>
+            All Areas
+          </Text>
+        </Pressable>
+        <MaterialCommunityIcons name="chevron-right" size={20} color={colors.textSecondary} />
+        <Text variant="labelMedium" style={{ color: colors.textSecondary, flex: 1 }} numberOfLines={1}>
+          {areaName}
+        </Text>
+      </Surface>
+      
       {renderProgressHeader()}
       {renderScheduleTabs()}
       
@@ -555,6 +575,17 @@ export default function AreaVerificationScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  breadcrumb: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    paddingHorizontal: 16,
+  },
+  breadcrumbButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 8,
   },
   progressHeader: {
     padding: 16,
