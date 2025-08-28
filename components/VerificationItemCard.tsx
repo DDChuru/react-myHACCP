@@ -9,6 +9,7 @@ import {
   StyleSheet,
   Pressable,
   Animated,
+  Alert,
 } from 'react-native';
 import {
   Card,
@@ -17,6 +18,9 @@ import {
   Chip,
   Button,
   Surface,
+  TextInput,
+  Portal,
+  Modal,
 } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import {
@@ -35,6 +39,9 @@ export default function VerificationItemCard({
 }: VerificationItemCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [verifying, setVerifying] = useState(false);
+  const [showFailureModal, setShowFailureModal] = useState(false);
+  const [reasonForFailure, setReasonForFailure] = useState('');
+  const [actionTaken, setActionTaken] = useState('');
   const animatedHeight = new Animated.Value(0);
   
   // High contrast colors
@@ -48,8 +55,39 @@ export default function VerificationItemCard({
   };
 
   const handleVerify = async (status: 'pass' | 'fail') => {
+    if (status === 'fail') {
+      // Show modal for failure reason (optional but recommended)
+      setShowFailureModal(true);
+    } else {
+      // Pass verification immediately
+      setVerifying(true);
+      await onVerify(status);
+      setVerifying(false);
+      setExpanded(false);
+    }
+  };
+
+  const handleConfirmFail = async () => {
+    setShowFailureModal(false);
     setVerifying(true);
-    await onVerify(status);
+    
+    // Pass the failure reason and action taken with the fail status
+    await onVerify('fail', reasonForFailure, actionTaken);
+    
+    // Reset fields
+    setReasonForFailure('');
+    setActionTaken('');
+    setVerifying(false);
+    setExpanded(false);
+  };
+
+  const handleSkipFailureReason = async () => {
+    setShowFailureModal(false);
+    setVerifying(true);
+    
+    // Allow fail without reason (users can complete on web later)
+    await onVerify('fail', '', '');
+    
     setVerifying(false);
     setExpanded(false);
   };
@@ -341,6 +379,82 @@ export default function VerificationItemCard({
         </Card.Content>
       </Card>
     </Pressable>
+
+    {/* Failure Reason Modal */}
+    <Portal>
+      <Modal
+        visible={showFailureModal}
+        onDismiss={() => setShowFailureModal(false)}
+        contentContainerStyle={[styles.modalContent, { backgroundColor: colors.surface }]}
+      >
+        <View style={styles.modalHeader}>
+          <MaterialCommunityIcons name="alert-circle" size={32} color="#f44336" />
+          <Text variant="titleLarge" style={{ color: colors.text, marginLeft: 12 }}>
+            Mark as Failed
+          </Text>
+        </View>
+        
+        <Text variant="bodyMedium" style={{ color: colors.textSecondary, marginBottom: 16 }}>
+          Please provide details about the failure (optional - can be completed on web later)
+        </Text>
+        
+        <TextInput
+          label="Reason for Failure"
+          value={reasonForFailure}
+          onChangeText={setReasonForFailure}
+          mode="outlined"
+          multiline
+          numberOfLines={3}
+          style={{ marginBottom: 12, backgroundColor: colors.cardBg }}
+          textColor={colors.text}
+          outlineColor={colors.border}
+          activeOutlineColor="#f44336"
+          placeholder="e.g., Equipment not properly cleaned, visible residue found..."
+          placeholderTextColor={colors.textSecondary}
+        />
+        
+        <TextInput
+          label="Action Taken"
+          value={actionTaken}
+          onChangeText={setActionTaken}
+          mode="outlined"
+          multiline
+          numberOfLines={2}
+          style={{ marginBottom: 20, backgroundColor: colors.cardBg }}
+          textColor={colors.text}
+          outlineColor={colors.border}
+          activeOutlineColor="#ff9800"
+          placeholder="e.g., Re-cleaned immediately, scheduled for deep clean..."
+          placeholderTextColor={colors.textSecondary}
+        />
+        
+        <View style={styles.modalActions}>
+          <Button
+            mode="outlined"
+            onPress={handleSkipFailureReason}
+            style={{ flex: 1, marginRight: 8 }}
+            textColor={colors.text}
+          >
+            Skip for Now
+          </Button>
+          
+          <Button
+            mode="contained"
+            onPress={handleConfirmFail}
+            style={{ flex: 1, marginLeft: 8 }}
+            buttonColor="#f44336"
+            textColor="#fff"
+            disabled={!reasonForFailure && !actionTaken}
+          >
+            Confirm Failure
+          </Button>
+        </View>
+        
+        <Text variant="bodySmall" style={{ color: colors.textSecondary, marginTop: 12, textAlign: 'center' }}>
+          Note: You can add or edit details later on the web portal
+        </Text>
+      </Modal>
+    </Portal>
   );
 }
 
@@ -455,5 +569,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 4,
+  },
+  modalContent: {
+    margin: 20,
+    padding: 20,
+    borderRadius: 12,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
   },
 });

@@ -155,9 +155,9 @@ export default function AreaVerificationScreen() {
     return items;
   };
 
-  const handleVerifyItem = async (item: AreaItemProgress, status: 'pass' | 'fail', notes?: string) => {
+  const handleVerifyItem = async (item: AreaItemProgress, status: 'pass' | 'fail', reasonForFailure?: string, actionTaken?: string) => {
     try {
-      // Build full context for inspection record (matching ACS structure)
+      // Build full context for inspection record (matching ACS/Angular structure)
       const verificationDetails = {
         // Location context
         siteId: siteId || progress?.siteId || areaId,  // Use passed siteId first
@@ -191,9 +191,10 @@ export default function AreaVerificationScreen() {
           roles: profile.roles,
         } : undefined,
         
-        // Failure details
-        notes: notes,
-        reasonForFailure: status === 'fail' ? notes : undefined,
+        // Failure details (aligned with Angular structure)
+        reasonForFailure: status === 'fail' ? (reasonForFailure || '') : undefined,
+        actionTaken: status === 'fail' ? (actionTaken || '') : undefined,
+        notes: reasonForFailure || actionTaken ? `${reasonForFailure}${actionTaken ? '\nAction: ' + actionTaken : ''}` : undefined,
         
         // Item metadata
         scoreWeight: 1,
@@ -433,7 +434,7 @@ export default function AreaVerificationScreen() {
   const renderItem = ({ item }: { item: AreaItemProgress }) => (
     <VerificationItemCard
       item={item}
-      onVerify={(status) => handleVerifyItem(item, status)}
+      onVerify={(status, reasonForFailure, actionTaken) => handleVerifyItem(item, status, reasonForFailure, actionTaken)}
       onAddPhoto={() => {
         setSelectedItem(item);
         router.push({

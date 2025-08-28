@@ -54,11 +54,15 @@ export interface InspectionModel {
   
   // Additional Verification Details
   notes?: string;            // Inspector notes
-  reasonForFailure?: string; // Aligns with ACS structure
+  reasonForFailure?: string; // Aligns with ACS/Angular structure - required on fail
   actionTaken?: string;      // Actions taken for failures
   issues?: string[];         // List of identified issues
   correctiveActions?: string[]; // Required corrective actions
-  photos?: AnnotatedPhoto[]; // Photo evidence with annotations
+  photos?: AnnotatedPhoto[]; // Photo evidence with annotations (deprecated - use imageUrls)
+  
+  // Image fields (aligned with Angular)
+  imageUrls?: string[];      // Array of Firebase Storage URLs for inspection photos
+  verificationImageUrl?: string; // Single verification signature/stamp image
   
   // Signatures & Compliance
   signature?: string;        // Digital signature (base64)
@@ -307,7 +311,7 @@ export interface ScheduleTabsProps {
 
 export interface VerificationItemCardProps {
   item: AreaItemProgress;
-  onVerify: (status: 'pass' | 'fail') => void;
+  onVerify: (status: 'pass' | 'fail', reasonForFailure?: string, actionTaken?: string) => void;
   onAddPhoto: () => void;
   onViewSCI: () => void;
   colorScheme: StatusColorScheme;

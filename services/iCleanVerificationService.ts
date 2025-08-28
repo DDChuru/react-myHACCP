@@ -573,9 +573,13 @@ export class VerificationService implements IVerificationService {
       verifiedAt: Timestamp.now(),
       
       // Failure details
-      reasonForFailure: status === 'fail' ? (details?.notes || details?.reasonForFailure) : undefined,
+      reasonForFailure: status === 'fail' ? (details?.reasonForFailure || details?.notes) : undefined,
       actionTaken: details?.actionTaken,
       notes: details?.notes,
+      
+      // Image fields (aligned with Angular)
+      imageUrls: details?.imageUrls || [],
+      verificationImageUrl: details?.verificationImageUrl,
       
       // Schedule information with full object
       schedule: schedule,  // Use cached/provided full schedule object
