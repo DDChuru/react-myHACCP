@@ -134,6 +134,7 @@ export interface TextAnnotation {
  */
 export interface LocalVerificationProgress {
   areaId: string;
+  siteId?: string;  // Site ID (may be different from areaId)
   date: string;  // YYYY-MM-DD format
   scheduleGroups: {
     daily: ScheduleGroupProgress;
@@ -506,7 +507,11 @@ export const CACHE_KEYS = {
   CONFIG: '@iCleanVerification:config',
   OFFLINE_QUEUE: '@iCleanVerification:offlineQueue',
   PHOTO_CACHE: '@iCleanVerification:photos:',
-  LAST_SYNC: '@iCleanVerification:lastSync'
+  LAST_SYNC: '@iCleanVerification:lastSync',
+  // Cache for static/reference data
+  SCHEDULES: '@iCleanVerification:schedules',
+  AREAS: '@iCleanVerification:areas:',
+  INSPECTION_HISTORY: '@iCleanVerification:history:'
 } as const;
 
 export const SYNC_CONFIG = {

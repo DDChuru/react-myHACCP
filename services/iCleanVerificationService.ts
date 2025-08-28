@@ -44,10 +44,207 @@ import {
 export class VerificationService implements IVerificationService {
   private companyId: string;
   private userId: string;
+  
+  // Cache maps for full objects
+  private scheduleCache: Map<string, any> = new Map();
+  private areaCache: Map<string, any> = new Map();
+  private inspectionHistoryCache: Map<string, boolean> = new Map();
 
   constructor(companyId: string, userId: string) {
     this.companyId = companyId;
     this.userId = userId;
+    
+    // Initialize caches on service creation
+    this.initializeCaches();
+  }
+
+  // ============================================================================
+  // CACHE INITIALIZATION
+  // ============================================================================
+
+  /**
+   * Initialize all caches on service startup
+   */
+  private async initializeCaches(): Promise<void> {
+    await Promise.all([
+      this.initializeScheduleCache(),
+      this.initializeAreaCache()
+    ]);
+  }
+
+  /**
+   * Initialize schedule cache from Storage or create defaults
+   */
+  private async initializeScheduleCache(): Promise<void> {
+    try {
+      // Check if schedules are already cached in Storage
+      const cachedSchedules = await Storage.getItem(CACHE_KEYS.SCHEDULES);
+      
+      if (cachedSchedules) {
+        const schedules = JSON.parse(cachedSchedules);
+        Object.entries(schedules).forEach(([key, value]) => {
+          this.scheduleCache.set(key, value);
+        });
+      } else {
+        // Create default schedule objects matching ACS structure
+        const defaultSchedules = {
+          'daily': {
+            id: 'daily',
+            name: 'Daily',
+            days: 1,
+            hours: 24,
+            cycleId: 1
+          },
+          'weekly': {
+            id: 'weekly',
+            name: 'Weekly',
+            days: 7,
+            hours: 168,
+            cycleId: 2
+          },
+          'monthly': {
+            id: 'monthly',
+            name: 'Monthly',
+            days: 30,
+            hours: 720,
+            cycleId: 3
+          },
+          'quarterly': {
+            id: 'quarterly',
+            name: 'Quarterly',
+            days: 90,
+            hours: 2160,
+            cycleId: 4
+          },
+          'annually': {
+            id: 'annually',
+            name: 'Annually',
+            days: 365,
+            hours: 8760,
+            cycleId: 5
+          }
+        };
+        
+        // Save to cache and Storage
+        Object.entries(defaultSchedules).forEach(([key, value]) => {
+          this.scheduleCache.set(key, value);
+        });
+        
+        await Storage.setItem(CACHE_KEYS.SCHEDULES, JSON.stringify(defaultSchedules));
+      }
+    } catch (error) {
+      console.error('[VerificationService] Error initializing schedule cache:', error);
+    }
+  }
+
+  /**
+   * Initialize area cache from Storage
+   */
+  private async initializeAreaCache(): Promise<void> {
+    try {
+      // Areas are cached per areaId
+      const keys = await Storage.getAllKeys();
+      const areaKeys = keys.filter(k => k.startsWith(CACHE_KEYS.AREAS));
+      
+      for (const key of areaKeys) {
+        const areaData = await Storage.getItem(key);
+        if (areaData) {
+          const areaId = key.replace(CACHE_KEYS.AREAS, '');
+          this.areaCache.set(areaId, JSON.parse(areaData));
+        }
+      }
+    } catch (error) {
+      console.error('[VerificationService] Error initializing area cache:', error);
+    }
+  }
+
+  /**
+   * Get full schedule object from cache
+   */
+  private getSchedule(scheduleId: string): any {
+    return this.scheduleCache.get(scheduleId.toLowerCase()) || {
+      id: scheduleId,
+      name: scheduleId.charAt(0).toUpperCase() + scheduleId.slice(1),
+      days: 1,
+      hours: 24,
+      cycleId: 1
+    };
+  }
+
+  /**
+   * Get full area object from cache or fetch it
+   */
+  private async getArea(areaId: string): Promise<any> {
+    // Check cache first
+    if (this.areaCache.has(areaId)) {
+      return this.areaCache.get(areaId);
+    }
+    
+    try {
+      // Fetch from Firestore
+      const areaDoc = await getDocs(
+        query(
+          collection(db, `companies/${this.companyId}/areas`),
+          where('id', '==', areaId)
+        )
+      );
+      
+      if (!areaDoc.empty) {
+        const areaData = areaDoc.docs[0].data();
+        
+        // Cache the area
+        this.areaCache.set(areaId, areaData);
+        await Storage.setItem(`${CACHE_KEYS.AREAS}${areaId}`, JSON.stringify(areaData));
+        
+        return areaData;
+      }
+    } catch (error) {
+      console.error('[VerificationService] Error fetching area:', error);
+    }
+    
+    // Return minimal area object if not found
+    return { id: areaId };
+  }
+
+  /**
+   * Check if this is the first inspection for an item
+   */
+  private async isFirstInspection(areaItemId: string): Promise<boolean> {
+    // Check cache first
+    if (this.inspectionHistoryCache.has(areaItemId)) {
+      return !this.inspectionHistoryCache.get(areaItemId);
+    }
+    
+    try {
+      // Check Storage for history
+      const historyKey = `${CACHE_KEYS.INSPECTION_HISTORY}${areaItemId}`;
+      const hasHistory = await Storage.getItem(historyKey);
+      
+      if (hasHistory) {
+        this.inspectionHistoryCache.set(areaItemId, true);
+        return false;
+      }
+      
+      // Check Firestore for any previous inspections
+      const inspectionQuery = query(
+        collection(db, `companies/${this.companyId}/inspections`),
+        where('areaItemId', '==', areaItemId)
+      );
+      
+      const snapshot = await getDocs(inspectionQuery);
+      const hasInspections = !snapshot.empty;
+      
+      // Cache the result
+      this.inspectionHistoryCache.set(areaItemId, hasInspections);
+      if (hasInspections) {
+        await Storage.setItem(historyKey, 'true');
+      }
+      
+      return !hasInspections;
+    } catch (error) {
+      console.error('[VerificationService] Error checking first inspection:', error);
+      return false;
+    }
   }
 
   // ============================================================================
@@ -125,8 +322,16 @@ export class VerificationService implements IVerificationService {
     const areaItems = await this.fetchAreaItems(areaId);
     const grouped = this.groupItemsBySchedule(areaItems);
     
+    // Cache the area data when initializing
+    const areaData = await this.getArea(areaId);
+    
+    // Determine siteId - it may be different from areaId
+    // Try to get it from the area data or use areaId as fallback
+    const siteId = areaData?.siteId || areaData?.site?.id || areaId;
+    
     const progress: LocalVerificationProgress = {
       areaId,
+      siteId,  // Add siteId to progress
       date: new Date().toISOString().split('T')[0],
       scheduleGroups: {
         daily: this.createScheduleGroup(grouped.daily),
@@ -264,15 +469,21 @@ export class VerificationService implements IVerificationService {
     status: 'pass' | 'fail', 
     details?: Partial<InspectionModel>
   ): Promise<void> {
-    const areaId = details?.siteId || ''; // Get from context
+    const areaId = details?.areaId || ''; // Get from context (fixed: was using siteId incorrectly)
     const progress = await this.getLocalProgress(areaId);
     
     if (!progress) return;
     
+    // Find the item to get its details
+    let foundItem: AreaItemProgress | null = null;
+    let scheduleId: string = '';
+    
     // Update item status in local cache
-    const updateItemInGroup = (group: ScheduleGroupProgress) => {
+    const updateItemInGroup = (group: ScheduleGroupProgress, schedule: string) => {
       const item = group.items.find(i => i.areaItemId === itemId);
       if (item) {
+        foundItem = item;
+        scheduleId = schedule;
         item.status = status;
         item.verifiedAt = Date.now();
         item.isAutoCompleted = false;
@@ -288,13 +499,27 @@ export class VerificationService implements IVerificationService {
         group.failedCount = group.items.filter(i => i.status === 'fail').length;
         group.completionPercentage = (group.completedCount / group.totalCount) * 100;
         group.lastVerifiedAt = Date.now();
+        
+        return true;
       }
+      return false;
     };
     
     // Update in appropriate schedule group
-    updateItemInGroup(progress.scheduleGroups.daily);
-    updateItemInGroup(progress.scheduleGroups.weekly);
-    updateItemInGroup(progress.scheduleGroups.monthly);
+    if (!updateItemInGroup(progress.scheduleGroups.daily, 'daily')) {
+      if (!updateItemInGroup(progress.scheduleGroups.weekly, 'weekly')) {
+        updateItemInGroup(progress.scheduleGroups.monthly, 'monthly');
+      }
+    }
+    
+    // Get cached schedule and area objects
+    const schedule = details?.schedule || this.getSchedule(scheduleId || details?.scheduleId || 'daily');
+    const area = details?.area || await this.getArea(areaId);
+    
+    // Check if this is the first inspection
+    const firstInspection = details?.firstInspection !== undefined 
+      ? details.firstInspection 
+      : await this.isFirstInspection(itemId);
     
     // Create inspection record for offline queue (matching ACS structure)
     const inspection: Partial<InspectionModel> = {
@@ -302,13 +527,13 @@ export class VerificationService implements IVerificationService {
       id: itemId,
       areaItemId: itemId,  // Keep for backwards compatibility
       
-      // Location references
+      // Location references with full objects
       areaId: areaId,
-      siteId: details?.siteId || areaId,  // Site might be different from area
-      area: details?.area,  // Include full area object if provided
+      siteId: details?.siteId || progress?.siteId || areaId,  // Site might be different from area
+      area: area,  // Use cached/fetched full area object
       
       // Item details
-      itemDescription: details?.itemDescription || item?.itemName,
+      itemDescription: details?.itemDescription || foundItem?.itemName,
       
       // Status fields (match ACS format)
       status,  // 'pass' or 'fail' (lowercase)
@@ -324,12 +549,13 @@ export class VerificationService implements IVerificationService {
       verifiedAt: Timestamp.now(),
       
       // Failure details
-      reasonForFailure: status === 'fail' ? (details?.notes || details?.reasonForFailure) : null,
+      reasonForFailure: status === 'fail' ? (details?.notes || details?.reasonForFailure) : undefined,
       actionTaken: details?.actionTaken,
+      notes: details?.notes,
       
-      // Schedule information
-      schedule: details?.schedule,
-      scheduleId: details?.scheduleId,
+      // Schedule information with full object
+      schedule: schedule,  // Use cached/provided full schedule object
+      scheduleId: scheduleId || details?.scheduleId,
       
       // Metadata
       companyId: this.companyId,
@@ -337,15 +563,25 @@ export class VerificationService implements IVerificationService {
       createdAt: Timestamp.now(),
       updatedAt: Timestamp.now(),
       
-      // Flags
-      firstInspection: details?.firstInspection ?? false,
+      // Flags (with proper firstInspection check)
+      firstInspection: firstInspection,
       deleted: false,
       serverInspection: true,
       
       // Score
       scoreWeight: details?.scoreWeight ?? 1,
       
-      ...details
+      // Mobile sync
+      iCleanerSyncId: this.generateLocalId(),
+      syncedAt: undefined,  // Will be set when synced
+      deviceId: 'mobile-app',
+      
+      // Don't spread all details to avoid overwriting our carefully set values
+      signatures: details?.signature,
+      supervisorApproval: details?.supervisorApproval,
+      photos: details?.photos,
+      issues: details?.issues,
+      correctiveActions: details?.correctiveActions
     };
     
     // Add to offline queue
@@ -380,15 +616,26 @@ export class VerificationService implements IVerificationService {
     const autoPassedIds: string[] = [];
     const manuallyVerifiedIds: string[] = [];
     
+    // Get cached area and schedule objects
+    const area = await this.getArea(areaId);
+    const dailySchedule = this.getSchedule('daily');
+    
     // Process daily items for auto-completion
     if (autoPassDailyItems) {
       for (const item of progress.scheduleGroups.daily.items) {
         if (item.status === 'pending' && item.isDue) {
+          // Check if this is the first inspection for this item
+          const isFirst = await this.isFirstInspection(item.areaItemId);
+          
           // Auto-pass this item
           item.status = 'pass';
           item.verifiedAt = Date.now();
           item.isAutoCompleted = true;
           autoPassedIds.push(item.areaItemId);
+          
+          // Mark as inspected in cache
+          this.inspectionHistoryCache.set(item.areaItemId, true);
+          await Storage.setItem(`${CACHE_KEYS.INSPECTION_HISTORY}${item.areaItemId}`, 'true');
           
           // Create inspection record (matching ACS structure)
           const inspectionRef = doc(collection(db, `companies/${this.companyId}/inspections`));
@@ -397,9 +644,10 @@ export class VerificationService implements IVerificationService {
             id: item.areaItemId,
             areaItemId: item.areaItemId,  // Keep for backwards compatibility
             
-            // Location references
+            // Location references with full objects
             areaId: areaId,
             siteId: progress.siteId || areaId,
+            area: area,  // Full area object
             
             // Item details
             itemDescription: item.itemName,
@@ -416,8 +664,9 @@ export class VerificationService implements IVerificationService {
             date: new Date().toISOString(),
             verifiedAt: Timestamp.now(),
             
-            // Schedule information
+            // Schedule information with full object
             scheduleId: 'daily',  // Auto-pass is for daily items
+            schedule: dailySchedule,  // Full schedule object
             
             // Metadata
             companyId: this.companyId,
@@ -425,13 +674,17 @@ export class VerificationService implements IVerificationService {
             createdAt: Timestamp.now(),
             updatedAt: Timestamp.now(),
             
-            // Flags
-            firstInspection: false,
+            // Flags (with proper first inspection check)
+            firstInspection: isFirst,
             deleted: false,
             serverInspection: true,
             
             // Score
             scoreWeight: 1,
+            
+            // Mobile sync
+            iCleanerSyncId: this.generateLocalId(),
+            deviceId: 'mobile-app',
             
             // Auto-completion tracking
             autoCompletionDetails: {
