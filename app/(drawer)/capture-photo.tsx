@@ -25,6 +25,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../../hooks/useAuth';
+import { iCleanVerificationService } from '../../services/iCleanVerificationService';
 
 export default function CapturePhotoScreen() {
   const theme = useTheme();
@@ -34,6 +35,7 @@ export default function CapturePhotoScreen() {
   
   const itemId = params.itemId as string;
   const itemName = params.itemName as string;
+  const areaId = params.areaId as string; // Need to pass this from area-verification
   
   // State management
   const [photo, setPhoto] = useState<string | null>(null);
@@ -120,19 +122,32 @@ export default function CapturePhotoScreen() {
       return;
     }
 
+    if (!areaId) {
+      console.error('No areaId provided to save photo');
+      Alert.alert('Error', 'Missing area information');
+      return;
+    }
+
     setLoading(true);
     try {
-      // TODO: Implement actual photo upload to Firebase Storage
-      // For now, just simulate saving
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Initialize verification service if needed
+      const verificationService = await iCleanVerificationService.initialize(
+        user?.uid || '',
+        profile?.companyId || ''
+      );
       
-      Alert.alert('Success', 'Photo saved successfully', [
-        { text: 'OK', onPress: () => router.back() }
-      ]);
+      // Add photo to the verification item
+      await verificationService.addPhotoToItem(areaId, itemId, photo, notes);
+      
+      // TODO: Upload to Firebase Storage when online
+      // For now, just saved locally with the item
+      
+      // Navigate back to area-verification screen
+      router.back();
+      
     } catch (error) {
       console.error('Error saving photo:', error);
       Alert.alert('Error', 'Failed to save photo');
-    } finally {
       setLoading(false);
     }
   };

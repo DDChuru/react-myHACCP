@@ -439,7 +439,11 @@ export default function AreaVerificationScreen() {
         setSelectedItem(item);
         router.push({
           pathname: '/(drawer)/capture-photo',
-          params: { itemId: item.areaItemId, itemName: item.itemName }
+          params: { 
+            itemId: item.areaItemId, 
+            itemName: item.itemName,
+            areaId: areaId  // Pass areaId for photo storage
+          }
         });
       }}
       onViewSCI={() => {

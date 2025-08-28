@@ -843,6 +843,56 @@ export class VerificationService implements IVerificationService {
     }
   }
 
+  /**
+   * Add photo to verification item
+   */
+  async addPhotoToItem(areaId: string, itemId: string, photoUri: string, notes?: string): Promise<void> {
+    const progressKey = `${CACHE_KEYS.PROGRESS}${areaId}`;
+    const progressData = await Storage.getItem(progressKey);
+    
+    if (!progressData) {
+      throw new Error('No verification progress found');
+    }
+    
+    const progress: LocalVerificationProgress = JSON.parse(progressData);
+    
+    // Find and update the item across all schedule groups
+    let found = false;
+    for (const group of Object.values(progress.scheduleGroups)) {
+      const item = group.items.find(i => i.areaItemId === itemId);
+      if (item) {
+        item.photoCount = (item.photoCount || 0) + 1;
+        found = true;
+        
+        // Also update the offline queue if there's a pending verification
+        const queueItem = progress.offlineQueue.find(q => 
+          q.inspection.id === itemId || q.inspection.areaItemId === itemId
+        );
+        if (queueItem) {
+          // Add to imageUrls array
+          if (!queueItem.inspection.imageUrls) {
+            queueItem.inspection.imageUrls = [];
+          }
+          queueItem.inspection.imageUrls.push(photoUri);
+          
+          // Add to local photos for upload
+          queueItem.photos.push({
+            localUri: photoUri,
+            uploadStatus: 'pending'
+          });
+        }
+        break;
+      }
+    }
+    
+    if (!found) {
+      console.warn(`Item ${itemId} not found in progress`);
+    }
+    
+    progress.lastModified = Date.now();
+    await Storage.setItem(progressKey, JSON.stringify(progress));
+  }
+
   // ============================================================================
   // HELPER METHODS
   // ============================================================================
