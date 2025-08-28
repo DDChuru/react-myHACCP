@@ -457,21 +457,43 @@ export default function AreaVerificationScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Breadcrumb Navigation */}
-      <Surface style={[styles.breadcrumb, { backgroundColor: colors.surface }]} elevation={1}>
-        <Pressable 
-          style={styles.breadcrumbButton}
-          onPress={() => router.replace('/(drawer)/iclean-verification')}
-        >
-          <MaterialCommunityIcons name="chevron-left" size={20} color={colors.text} />
-          <Text variant="labelMedium" style={{ color: colors.text }}>
-            All Areas
-          </Text>
-        </Pressable>
-        <MaterialCommunityIcons name="chevron-right" size={20} color={colors.textSecondary} />
-        <Text variant="labelMedium" style={{ color: colors.textSecondary, flex: 1 }} numberOfLines={1}>
-          {areaName}
-        </Text>
+      {/* Header with Back Button */}
+      <Surface style={[styles.header, { backgroundColor: colors.surface }]} elevation={2}>
+        <View style={styles.headerRow}>
+          <Pressable 
+            style={styles.backButton}
+            onPress={() => router.replace('/(drawer)/iclean-verification')}
+          >
+            <MaterialCommunityIcons name="arrow-left" size={24} color={colors.text} />
+          </Pressable>
+          
+          <View style={styles.headerContent}>
+            <Text variant="titleLarge" style={{ color: colors.text }} numberOfLines={1}>
+              {areaName}
+            </Text>
+            <Text variant="bodySmall" style={{ color: colors.textSecondary }}>
+              Site: {siteId ? siteId.substring(0, 8) + '...' : 'Unknown'}
+            </Text>
+          </View>
+          
+          {/* Menu Button for Additional Options */}
+          <Pressable 
+            style={styles.menuButton}
+            onPress={() => {
+              Alert.alert(
+                'Area Options',
+                'What would you like to do?',
+                [
+                  { text: 'View Area Details', onPress: () => {} },
+                  { text: 'Skip This Area', onPress: () => router.replace('/(drawer)/iclean-verification') },
+                  { text: 'Cancel', style: 'cancel' }
+                ]
+              );
+            }}
+          >
+            <MaterialCommunityIcons name="dots-vertical" size={24} color={colors.text} />
+          </Pressable>
+        </View>
       </Surface>
       
       {renderProgressHeader()}
@@ -502,6 +524,27 @@ export default function AreaVerificationScreen() {
             </Text>
           </View>
         }
+      />
+      
+      {/* Exit Area FAB - Always visible in top left */}
+      <FAB
+        icon="exit-to-app"
+        size="small"
+        onPress={() => {
+          Alert.alert(
+            'Exit Area Verification?',
+            'Your progress has been saved. You can continue where you left off.',
+            [
+              { text: 'Stay', style: 'cancel' },
+              { 
+                text: 'Exit to Areas', 
+                onPress: () => router.replace('/(drawer)/iclean-verification')
+              }
+            ]
+          );
+        }}
+        style={[styles.exitFab, { backgroundColor: colors.surface }]}
+        color={colors.text}
       />
       
       {/* Complete Inspection FAB - Show when there are pending items */}
@@ -576,16 +619,27 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  breadcrumb: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-    paddingHorizontal: 16,
+  header: {
+    padding: 16,
+    paddingTop: 12,
+    paddingBottom: 12,
   },
-  breadcrumbButton: {
+  headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginRight: 8,
+  },
+  backButton: {
+    padding: 8,
+    marginRight: 12,
+    borderRadius: 8,
+  },
+  headerContent: {
+    flex: 1,
+  },
+  menuButton: {
+    padding: 8,
+    marginLeft: 12,
+    borderRadius: 8,
   },
   progressHeader: {
     padding: 16,
@@ -639,6 +693,13 @@ const styles = StyleSheet.create({
     margin: 16,
     right: 0,
     bottom: 0,
+  },
+  exitFab: {
+    position: 'absolute',
+    margin: 16,
+    left: 0,
+    bottom: 0,
+    elevation: 4,
   },
   fabGroup: {
     paddingBottom: 50,
