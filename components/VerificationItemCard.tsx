@@ -133,18 +133,19 @@ export default function VerificationItemCard({
   };
 
   return (
-    <Pressable onPress={toggleExpanded}>
-      <Card 
-        style={[
-          styles.card, 
-          { 
-            backgroundColor: colors.cardBg,
-            borderColor: colorScheme.border,
-            borderWidth: item.isOverdue ? 2 : 1,
-          }
-        ]}
-      >
-        <Card.Content>
+    <>
+      <Pressable onPress={toggleExpanded}>
+        <Card 
+          style={[
+            styles.card, 
+            { 
+              backgroundColor: colors.cardBg,
+              borderColor: colorScheme.border,
+              borderWidth: item.isOverdue ? 2 : 1,
+            }
+          ]}
+        >
+          <Card.Content>
           {/* Header Row */}
           <View style={styles.headerRow}>
             <View style={styles.statusContainer}>
@@ -376,13 +377,13 @@ export default function VerificationItemCard({
               </View>
             </Animated.View>
           )}
-        </Card.Content>
-      </Card>
-    </Pressable>
+          </Card.Content>
+        </Card>
+      </Pressable>
 
-    {/* Failure Reason Modal */}
-    <Portal>
-      <Modal
+      {/* Failure Reason Modal */}
+      <Portal>
+        <Modal
         visible={showFailureModal}
         onDismiss={() => setShowFailureModal(false)}
         contentContainerStyle={[styles.modalContent, { backgroundColor: colors.surface }]}
@@ -453,8 +454,9 @@ export default function VerificationItemCard({
         <Text variant="bodySmall" style={{ color: colors.textSecondary, marginTop: 12, textAlign: 'center' }}>
           Note: You can add or edit details later on the web portal
         </Text>
-      </Modal>
-    </Portal>
+        </Modal>
+      </Portal>
+    </>
   );
 }
 
