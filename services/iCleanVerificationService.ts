@@ -181,16 +181,32 @@ export class VerificationService implements IVerificationService {
     }
     
     try {
-      // Fetch from Firestore
-      const areaDoc = await getDocs(
+      // Try fetching from siteAreas collection first (more likely to exist)
+      let areaDoc = await getDocs(
         query(
-          collection(db, `companies/${this.companyId}/areas`),
+          collection(db, `companies/${this.companyId}/siteAreas`),
           where('id', '==', areaId)
         )
       );
       
+      // If not found, try areas collection
+      if (areaDoc.empty) {
+        areaDoc = await getDocs(
+          query(
+            collection(db, `companies/${this.companyId}/areas`),
+            where('id', '==', areaId)
+          )
+        );
+      }
+      
       if (!areaDoc.empty) {
-        const areaData = areaDoc.docs[0].data();
+        const areaData = { id: areaDoc.docs[0].id, ...areaDoc.docs[0].data() };
+        
+        console.log('[VerificationService] Area fetched:', {
+          areaId: areaData.id,
+          siteId: areaData.siteId,
+          name: areaData.name
+        });
         
         // Cache the area
         this.areaCache.set(areaId, areaData);
@@ -203,6 +219,7 @@ export class VerificationService implements IVerificationService {
     }
     
     // Return minimal area object if not found
+    console.log('[VerificationService] Area not found, using minimal object for:', areaId);
     return { id: areaId };
   }
 
@@ -255,21 +272,21 @@ export class VerificationService implements IVerificationService {
    * Get local verification progress from Storage
    * This is the primary source for UI status display
    */
-  async getLocalProgress(areaId: string, forceRefresh: boolean = false): Promise<LocalVerificationProgress | null> {
+  async getLocalProgress(areaId: string, forceRefresh: boolean = false, siteId?: string): Promise<LocalVerificationProgress | null> {
     try {
       const key = `${CACHE_KEYS.PROGRESS}${areaId}`;
       
       // If force refresh, always fetch fresh data
       if (forceRefresh) {
         console.log('[iCleanService] Force refreshing data for area:', areaId);
-        return this.initializeProgress(areaId);
+        return this.initializeProgress(areaId, [], siteId);
       }
       
       const data = await Storage.getItem(key);
       
       if (!data) {
         // Initialize new progress if none exists
-        return this.initializeProgress(areaId);
+        return this.initializeProgress(areaId, [], siteId);
       }
       
       const progress = JSON.parse(data) as LocalVerificationProgress;
@@ -279,7 +296,13 @@ export class VerificationService implements IVerificationService {
       if (progress.date !== today) {
         // Reset for new day but preserve offline queue
         const offlineQueue = progress.offlineQueue || [];
-        return this.initializeProgress(areaId, offlineQueue);
+        return this.initializeProgress(areaId, offlineQueue, siteId);
+      }
+      
+      // Update siteId if provided and different
+      if (siteId && progress.siteId !== siteId) {
+        progress.siteId = siteId;
+        await this.updateLocalProgress(areaId, progress);
       }
       
       return progress;
@@ -292,12 +315,12 @@ export class VerificationService implements IVerificationService {
   /**
    * Force sync with Firestore to get latest data
    */
-  async syncWithFirestore(areaId: string): Promise<LocalVerificationProgress | null> {
+  async syncWithFirestore(areaId: string, siteId?: string): Promise<LocalVerificationProgress | null> {
     try {
-      console.log('[iCleanService] Syncing with Firestore for area:', areaId);
+      console.log('[iCleanService] Syncing with Firestore for area:', areaId, 'site:', siteId);
       
       // Force fetch fresh data from Firestore
-      const progress = await this.initializeProgress(areaId);
+      const progress = await this.initializeProgress(areaId, [], siteId);
       
       if (progress) {
         progress.syncStatus = 'synced';
@@ -317,7 +340,8 @@ export class VerificationService implements IVerificationService {
    */
   private async initializeProgress(
     areaId: string, 
-    existingQueue: OfflineVerification[] = []
+    existingQueue: OfflineVerification[] = [],
+    providedSiteId?: string
   ): Promise<LocalVerificationProgress> {
     const areaItems = await this.fetchAreaItems(areaId);
     const grouped = this.groupItemsBySchedule(areaItems);
@@ -325,9 +349,9 @@ export class VerificationService implements IVerificationService {
     // Cache the area data when initializing
     const areaData = await this.getArea(areaId);
     
-    // Determine siteId - it may be different from areaId
-    // Try to get it from the area data or use areaId as fallback
-    const siteId = areaData?.siteId || areaData?.site?.id || areaId;
+    // Determine siteId - use provided, then area data, then fallback
+    // PROVIDED siteId is the most reliable source (from navigation params)
+    const siteId = providedSiteId || areaData?.siteId || areaData?.site?.id || areaId;
     
     const progress: LocalVerificationProgress = {
       areaId,

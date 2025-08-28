@@ -185,9 +185,14 @@ export default function ICleanVerificationScreen() {
   };
 
   const navigateToAreaVerification = (areaId: string, areaName: string) => {
+    // Pass siteId from profile to ensure correct site context
     router.push({
       pathname: '/(drawer)/area-verification',
-      params: { areaId, areaName }
+      params: { 
+        areaId, 
+        areaName,
+        siteId: profile?.siteId || ''  // Pass the actual site ID
+      }
     });
   };
 

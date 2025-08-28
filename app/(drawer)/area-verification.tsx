@@ -54,6 +54,7 @@ export default function AreaVerificationScreen() {
   
   const areaId = params.areaId as string;
   const areaName = params.areaName as string;
+  const siteId = params.siteId as string;
   
   // State management
   const [activeTab, setActiveTab] = useState<ScheduleTab>('daily');
@@ -88,7 +89,7 @@ export default function AreaVerificationScreen() {
 
   const loadProgress = async () => {
     try {
-      const localProgress = await verificationService.getLocalProgress(areaId);
+      const localProgress = await verificationService.getLocalProgress(areaId, false, siteId);
       if (localProgress) {
         setProgress(localProgress);
       }
@@ -103,13 +104,14 @@ export default function AreaVerificationScreen() {
     setRefreshing(true);
     try {
       // Force sync with Firestore
-      const freshProgress = await verificationService.syncWithFirestore(areaId);
+      const freshProgress = await verificationService.syncWithFirestore(areaId, siteId);
       if (freshProgress) {
         setProgress(freshProgress);
         console.log('[AreaVerification] Sync complete. Items loaded:', {
           daily: freshProgress.scheduleGroups.daily.items.length,
           weekly: freshProgress.scheduleGroups.weekly.items.length,
-          monthly: freshProgress.scheduleGroups.monthly.items.length
+          monthly: freshProgress.scheduleGroups.monthly.items.length,
+          siteId: freshProgress.siteId  // Log the siteId to verify it's correct
         });
       }
     } catch (error) {
@@ -118,7 +120,7 @@ export default function AreaVerificationScreen() {
     } finally {
       setRefreshing(false);
     }
-  }, [areaId]);
+  }, [areaId, siteId]);
 
   const getCurrentScheduleGroup = (): ScheduleGroupProgress | null => {
     if (!progress) return null;
@@ -157,11 +159,12 @@ export default function AreaVerificationScreen() {
       // Build full context for inspection record (matching ACS structure)
       const verificationDetails = {
         // Location context
-        siteId: progress?.siteId || areaId,  // Use actual siteId if available
+        siteId: siteId || progress?.siteId || areaId,  // Use passed siteId first
         areaId: areaId,
         area: {
           id: areaId,
           name: areaName,
+          siteId: siteId,  // Include siteId in area object
           // Add more area details if available in progress
         },
         
