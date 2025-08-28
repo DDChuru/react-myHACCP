@@ -87,6 +87,75 @@ class StorageWrapper {
       console.error('Storage clear error:', error);
     }
   }
+
+  async getAllKeys(): Promise<string[]> {
+    try {
+      if (Platform.OS === 'web') {
+        // Use localStorage on web (client-side)
+        if (typeof window !== 'undefined' && window.localStorage) {
+          return Object.keys(window.localStorage);
+        }
+        // Return memory storage keys for SSR
+        return Object.keys(memoryStorage);
+      }
+      // Use AsyncStorage on native
+      return await AsyncStorage.getAllKeys();
+    } catch (error) {
+      console.error('Storage getAllKeys error:', error);
+      return [];
+    }
+  }
+
+  async multiGet(keys: string[]): Promise<Array<[string, string | null]>> {
+    try {
+      if (Platform.OS === 'web') {
+        // Use localStorage on web (client-side)
+        const result: Array<[string, string | null]> = [];
+        for (const key of keys) {
+          const value = await this.getItem(key);
+          result.push([key, value]);
+        }
+        return result;
+      }
+      // Use AsyncStorage on native
+      return await AsyncStorage.multiGet(keys);
+    } catch (error) {
+      console.error('Storage multiGet error:', error);
+      return keys.map(key => [key, null]);
+    }
+  }
+
+  async multiSet(keyValuePairs: Array<[string, string]>): Promise<void> {
+    try {
+      if (Platform.OS === 'web') {
+        // Use localStorage on web (client-side)
+        for (const [key, value] of keyValuePairs) {
+          await this.setItem(key, value);
+        }
+        return;
+      }
+      // Use AsyncStorage on native
+      await AsyncStorage.multiSet(keyValuePairs);
+    } catch (error) {
+      console.error('Storage multiSet error:', error);
+    }
+  }
+
+  async multiRemove(keys: string[]): Promise<void> {
+    try {
+      if (Platform.OS === 'web') {
+        // Use localStorage on web (client-side)
+        for (const key of keys) {
+          await this.removeItem(key);
+        }
+        return;
+      }
+      // Use AsyncStorage on native
+      await AsyncStorage.multiRemove(keys);
+    } catch (error) {
+      console.error('Storage multiRemove error:', error);
+    }
+  }
 }
 
 export const Storage = new StorageWrapper();
