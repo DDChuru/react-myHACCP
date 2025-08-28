@@ -134,6 +134,7 @@ export interface AreaItemProgress {
   isDue: boolean;
   isOverdue: boolean;
   dueDate: string; // YYYY-MM-DD
+  frequency?: string; // daily, weekly, monthly
 }
 
 /**
@@ -365,6 +366,102 @@ export interface FilterOptions {
 export interface SortOptions {
   field: 'name' | 'status' | 'dueDate' | 'lastVerified';
   direction: 'asc' | 'desc';
+}
+
+// ============================================================================
+// CHECKLIST MODEL WITH d1-d31 TRACKING
+// ============================================================================
+
+/**
+ * Monthly tracking model for compliance reporting
+ * Tracks completion status for each day of the month (d1-d31)
+ */
+export interface ChecklistItemModel {
+  id: string;
+  areaItemId: string;
+  itemName: string;
+  month: number; // 0-11
+  year: number;
+  companyId: string;
+  siteId: string;
+  areaId: string;
+  
+  // Daily status tracking (d1-d31)
+  d1?: DayVerification;
+  d2?: DayVerification;
+  d3?: DayVerification;
+  d4?: DayVerification;
+  d5?: DayVerification;
+  d6?: DayVerification;
+  d7?: DayVerification;
+  d8?: DayVerification;
+  d9?: DayVerification;
+  d10?: DayVerification;
+  d11?: DayVerification;
+  d12?: DayVerification;
+  d13?: DayVerification;
+  d14?: DayVerification;
+  d15?: DayVerification;
+  d16?: DayVerification;
+  d17?: DayVerification;
+  d18?: DayVerification;
+  d19?: DayVerification;
+  d20?: DayVerification;
+  d21?: DayVerification;
+  d22?: DayVerification;
+  d23?: DayVerification;
+  d24?: DayVerification;
+  d25?: DayVerification;
+  d26?: DayVerification;
+  d27?: DayVerification;
+  d28?: DayVerification;
+  d29?: DayVerification;
+  d30?: DayVerification;
+  d31?: DayVerification;
+  
+  // Summary fields
+  totalDays: number;
+  completedDays: number;
+  failedDays: number;
+  completionRate: number;
+  
+  // Metadata
+  createdAt: number;
+  updatedAt: number;
+  lastSyncedAt?: number;
+}
+
+/**
+ * Individual day verification record
+ */
+export interface DayVerification {
+  status: 'pass' | 'fail' | 'pending';
+  verifiedAt?: string;
+  verifiedBy?: string;
+  verifiedByName?: string;
+  notes?: string;
+  photoUrl?: string;
+  syncStatus?: 'local' | 'syncing' | 'synced';
+}
+
+/**
+ * Helper type for accessing day fields dynamically
+ */
+export type DayField = `d${number}`;
+
+/**
+ * Monthly progress summary for UI display
+ */
+export interface MonthlyProgressSummary {
+  itemId: string;
+  itemName: string;
+  month: number;
+  year: number;
+  schedule: ScheduleFrequency;
+  dailyStatuses: { [key in DayField]?: DayVerification };
+  completionRate: number;
+  overdueCount: number;
+  requiresAttention: boolean;
 }
 
 // ============================================================================

@@ -431,6 +431,25 @@ export class SCIFirestoreService {
         'Cleaning_Chemicals',
         'Chemicals',
         'cleaningChemicals'
+      ],
+      'keyPoints': [
+        'Key Points',
+        'Key_Points',
+        'Key Sanitation Points',
+        'keyPoints',
+        'keySanitationPoints'
+      ],
+      'cleaningInstructions': [
+        'Cleaning Instructions',
+        'Cleaning_Instructions',
+        'cleaningInstructions',
+        'instructions'
+      ],
+      'equipmentColorCoding': [
+        'Equipment Color Coding',
+        'Equipment_Color_Coding',
+        'equipmentColorCoding',
+        'colorCoding'
       ]
     };
 
@@ -476,7 +495,10 @@ export class SCIFirestoreService {
       ppeRequirements: mappedContent.ppeRequirements?.length || 0,
       safetyPrecautions: mappedContent.safetyPrecautions?.length || 0,
       applicationEquipment: mappedContent.applicationEquipment?.length || 0,
-      cleaningChemicals: mappedContent.cleaningChemicals?.length || 0
+      cleaningChemicals: mappedContent.cleaningChemicals?.length || 0,
+      keyPoints: mappedContent.keyPoints?.length || 0,
+      cleaningInstructions: mappedContent.cleaningInstructions?.length || 0,
+      equipmentColorCoding: mappedContent.equipmentColorCoding?.length || 0
     });
     
     return mappedContent;

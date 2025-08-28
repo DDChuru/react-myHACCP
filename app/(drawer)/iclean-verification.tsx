@@ -11,6 +11,7 @@ import {
   Alert,
   Pressable,
   ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import {
   Text,
@@ -39,7 +40,7 @@ import { QRCodeData, LocalVerificationProgress } from '../../types/iCleanVerific
 export default function ICleanVerificationScreen() {
   const theme = useTheme();
   const router = useRouter();
-  const { user, profile } = useAuth();
+  const { user, userProfile: profile } = useAuth();
   
   // State management
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
@@ -47,6 +48,7 @@ export default function ICleanVerificationScreen() {
   const [showAreaList, setShowAreaList] = useState(false);
   const [areas, setAreas] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [areaProgress, setAreaProgress] = useState<Map<string, LocalVerificationProgress>>(new Map());
   
@@ -77,27 +79,45 @@ export default function ICleanVerificationScreen() {
         const { status } = await Camera.requestCameraPermissionsAsync();
         setHasPermission(status === 'granted');
       })();
-    } else if (Platform.OS === 'web') {
-      // On web, we can't use camera for QR scanning
+    } else {
+      // On web or when Camera is not available, set permission to false
+      // but still allow the screen to render
       setHasPermission(false);
     }
-    
-    // Load site areas
-    loadSiteAreas();
   }, []);
 
+  useEffect(() => {
+    // Load site areas when profile is available
+    if (profile?.companyId && profile?.siteId) {
+      loadSiteAreas();
+    }
+  }, [profile]);
+
   const loadSiteAreas = async () => {
-    if (!profile?.companyId || !profile?.siteId) return;
+    if (!profile?.companyId || !profile?.siteId) {
+      console.log('[iClean] Missing profile data:', { 
+        companyId: profile?.companyId, 
+        siteId: profile?.siteId 
+      });
+      return;
+    }
+    
+    console.log('[iClean] Loading areas for:', { 
+      companyId: profile.companyId, 
+      siteId: profile.siteId 
+    });
     
     setLoading(true);
     try {
-      // Fetch site areas from Firestore
+      // Fetch site areas from Firestore (company-scoped collection)
       const areasRef = collection(db, `companies/${profile.companyId}/siteAreas`);
       const q = query(
         areasRef,
-        where('siteId', '==', profile.siteId),
-        where('isActive', '==', true)
+        where('siteId', '==', profile.siteId)
+        // Removed isActive filter - may not exist in your data
       );
+      
+      console.log('[iClean] Querying:', `companies/${profile.companyId}/siteAreas where siteId == ${profile.siteId}`);
       
       const snapshot = await getDocs(q);
       const areasData = snapshot.docs.map(doc => ({
@@ -105,12 +125,24 @@ export default function ICleanVerificationScreen() {
         ...doc.data()
       }));
       
+      console.log('[iClean] Areas loaded:', areasData.length);
+      
+      // If no areas found, try without siteId filter to see if there's any data
+      if (areasData.length === 0) {
+        console.log('[iClean] No areas found with siteId filter, checking collection...');
+        const allAreasSnapshot = await getDocs(collection(db, `companies/${profile.companyId}/siteAreas`));
+        console.log('[iClean] Total areas in collection:', allAreasSnapshot.size);
+        if (allAreasSnapshot.size > 0) {
+          console.log('[iClean] Sample area data:', allAreasSnapshot.docs[0].data());
+        }
+      }
+      
       setAreas(areasData);
       
       // Load progress for each area
       const progressMap = new Map();
       for (const area of areasData) {
-        const progress = await verificationService.getLocalProgress(area.id);
+        const progress = await verificationService.getLocalProgress(area.id, refreshing);
         if (progress) {
           progressMap.set(area.id, progress);
         }
@@ -121,7 +153,14 @@ export default function ICleanVerificationScreen() {
       Alert.alert('Error', 'Failed to load areas');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
+  };
+
+  const handleRefresh = async () => {
+    console.log('[iClean] Pull-to-refresh triggered');
+    setRefreshing(true);
+    await loadSiteAreas();
   };
 
   const handleQRCodeScanned = ({ data }: { data: string }) => {
@@ -178,7 +217,8 @@ export default function ICleanVerificationScreen() {
     area.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  if (hasPermission === null) {
+  // Only show loading spinner on native while checking camera permissions
+  if (Platform.OS !== 'web' && hasPermission === null) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         <ActivityIndicator size="large" color={colors.pass} />
@@ -186,9 +226,57 @@ export default function ICleanVerificationScreen() {
     );
   }
 
+  // Check if user has required profile data
+  if (!profile?.companyId || !profile?.siteId) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <ScrollView contentContainerStyle={styles.content}>
+          <Surface style={[styles.header, { backgroundColor: colors.surface }]} elevation={2}>
+            <View style={styles.headerContent}>
+              <MaterialCommunityIcons name="alert-circle" size={32} color={colors.fail} />
+              <View style={styles.headerText}>
+                <Text variant="headlineMedium" style={{ color: colors.text }}>
+                  Setup Required
+                </Text>
+                <Text variant="bodyMedium" style={{ color: colors.textSecondary }}>
+                  Please contact your administrator to assign you to a site
+                </Text>
+              </View>
+            </View>
+          </Surface>
+          <View style={styles.emptyState}>
+            <MaterialCommunityIcons name="domain" size={64} color={colors.textSecondary} />
+            <Text variant="titleMedium" style={{ color: colors.text, marginTop: 16 }}>
+              No Site Assigned
+            </Text>
+            <Text variant="bodyMedium" style={{ color: colors.textSecondary, marginTop: 8, textAlign: 'center' }}>
+              Your profile needs to be assigned to a company and site to use iClean Verification.
+            </Text>
+            {profile?.companyId && !profile?.siteId && (
+              <Text variant="bodySmall" style={{ color: colors.textSecondary, marginTop: 16 }}>
+                Company: {profile.companyId}
+              </Text>
+            )}
+          </View>
+        </ScrollView>
+      </View>
+    );
+  }
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView 
+        contentContainerStyle={styles.content}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            colors={[colors.pass]}
+            tintColor={colors.pass}
+            title="Pull to sync data..."
+            titleColor={colors.textSecondary}
+          />
+        }>
         {/* Header Section */}
         <Surface style={[styles.header, { backgroundColor: colors.surface }]} elevation={2}>
           <View style={styles.headerContent}>
@@ -200,6 +288,11 @@ export default function ICleanVerificationScreen() {
               <Text variant="bodyMedium" style={{ color: colors.textSecondary }}>
                 Verify cleaning and sanitation activities
               </Text>
+              {!loading && areas.length > 0 && (
+                <Text variant="labelSmall" style={{ color: colors.textSecondary, marginTop: 4 }}>
+                  {refreshing ? 'Syncing...' : 'Pull down to sync data'}
+                </Text>
+              )}
             </View>
           </View>
         </Surface>
@@ -264,6 +357,29 @@ export default function ICleanVerificationScreen() {
 
             {loading ? (
               <ActivityIndicator size="large" color={colors.pass} style={{ marginTop: 20 }} />
+            ) : areas.length === 0 ? (
+              <Surface style={[styles.emptyAreaState, { backgroundColor: colors.cardBg }]} elevation={1}>
+                <MaterialCommunityIcons name="map-marker-off" size={48} color={colors.textSecondary} />
+                <Text variant="titleMedium" style={{ color: colors.text, marginTop: 16 }}>
+                  No Areas Found
+                </Text>
+                <Text variant="bodyMedium" style={{ color: colors.textSecondary, marginTop: 8, textAlign: 'center' }}>
+                  No areas have been configured for your site yet.
+                </Text>
+                <Text variant="bodySmall" style={{ color: colors.textSecondary, marginTop: 16, textAlign: 'center' }}>
+                  Site ID: {profile?.siteId}
+                </Text>
+              </Surface>
+            ) : filteredAreas.length === 0 ? (
+              <Surface style={[styles.emptyAreaState, { backgroundColor: colors.cardBg }]} elevation={1}>
+                <MaterialCommunityIcons name="magnify-close" size={48} color={colors.textSecondary} />
+                <Text variant="titleMedium" style={{ color: colors.text, marginTop: 16 }}>
+                  No Matching Areas
+                </Text>
+                <Text variant="bodyMedium" style={{ color: colors.textSecondary, marginTop: 8, textAlign: 'center' }}>
+                  Try adjusting your search term
+                </Text>
+              </Surface>
             ) : (
               filteredAreas.map((area) => {
                 const stats = getAreaStats(area.id);
@@ -517,5 +633,18 @@ const styles = StyleSheet.create({
   },
   bypassButton: {
     paddingHorizontal: 24,
+  },
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 32,
+    minHeight: 300,
+  },
+  emptyAreaState: {
+    marginTop: 24,
+    padding: 32,
+    borderRadius: 12,
+    alignItems: 'center',
   },
 });

@@ -119,13 +119,13 @@ Enable field workers to capture and manage images for Standard Cleaning Instruct
 
 ## 🔄 In Progress
 
-### Current Focus (Aug 24, 2025)
-- ✅ Self-inspection module completed and production-ready
-- ✅ Built complete SCI document viewer with collapsible sections
-- ✅ Implemented image capture screen with camera/gallery support
-- ✅ Created image gallery with selection mode
-- 🔄 Ready for testing on Android device
-- ⏳ Next: Implement Firebase Storage upload and offline sync
+### Current Focus (Aug 27, 2025) - iClean Verification Completion
+- ✅ Added iClean Verification to drawer navigation
+- ✅ Created tabbed SCI Modal component (3 tabs: Cleaning Steps, Key Sanitation, Inspection Points)
+- ✅ Implemented ChecklistItemModel with d1-d31 daily tracking
+- ✅ Created MonthlyProgressView component for compliance reporting
+- ✅ Created missing photo capture and SCI viewer screens
+- ⏳ Next: Connect to real Firestore data and re-enable QR scanner
 
 ---
 
@@ -227,6 +227,49 @@ npx expo install expo-image-manipulator
 _Add any blockers, questions, or collaboration needs here_
 
 ---
+
+## 📚 iClean Verification - Implementation References
+
+### Key Documentation Files (Quick Reference)
+1. **`docs/ICLEAN_VERIFICATION_CACHE_FLOW.md`**
+   - Advanced cache management (Firestore → AsyncStorage → Runtime)
+   - Performance optimizations for 5000+ items
+   - Offline sync queue with retry logic
+   - Status priority: Overdue → Failed → In Progress → Pass → Pending
+
+2. **`project-management/icleanverification.md`**
+   - Complete feature specification
+   - CRITICAL: Only Pass/Fail status (no partial/NA)
+   - Auto-pass ONLY daily items on completion
+   - Tabbed SCI modal interface
+   - High-contrast UI requirements
+
+3. **`docs/CLEANING_SYSTEM_INTERFACES.md`**
+   - 8 core data models
+   - InspectionModel is primary persistence
+   - MCS → AreaItem → Inspection → Checklist flow
+   - Company-scoped collections (CSC pattern)
+
+### Missing High-Priority Features
+- [ ] ~~Virtual scrolling for 5000+ items~~ (Not needed - items are filtered by area)
+- [x] Tabbed SCI modal (Cleaning Steps | Key Sanitation | Inspection Points)
+- [x] Schedule-based due dates (Daily/Weekly/Monthly) - Already implemented
+- [x] High-contrast design (white-cards issue) - Already addressed
+- [x] ChecklistItemModel with d1-d31 tracking
+- [ ] Grouped notifications
+- [ ] Supervisor approval workflow
+
+### Target Metrics
+- 95% verification completion rate
+- <5 seconds load for 5000 items
+- <1% sync failure rate
+
+---
+
+## 🚀 Build Status
+- **EAS Preview Build**: In progress
+- URL: https://expo.dev/accounts/dachu/projects/myHACCPapp/builds/da09fe2c-3c48-48a0-b40d-5854e7abd53f
+- Native features: QR scanning, SVG annotations, signatures
 
 ---
 

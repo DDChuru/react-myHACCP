@@ -118,6 +118,16 @@ function CustomDrawerContent(props: any) {
             inactiveTintColor={theme.colors.onSurfaceVariant}
             style={[styles.drawerItem, styles.indentedItem]}
           />
+          <DrawerItem
+            label="iClean Verification"
+            icon={({ color, size }) => (
+              <MaterialCommunityIcons name="checkbox-marked-circle-outline" size={size} color={color} />
+            )}
+            onPress={() => props.navigation.navigate('iclean-verification')}
+            activeTintColor={theme.colors.primary}
+            inactiveTintColor={theme.colors.onSurfaceVariant}
+            style={[styles.drawerItem, styles.indentedItem]}
+          />
 
           {/* People & Training Section */}
           <RNText style={styles.sectionHeader}>PEOPLE & TRAINING</RNText>
@@ -262,6 +272,23 @@ export default function DrawerLayout() {
         options={{
           title: 'External Inspection',
           drawerItemStyle: { display: 'none' },
+        }}
+      />
+
+      <Drawer.Screen
+        name="iclean-verification"
+        options={{
+          title: 'iClean Verification',
+          drawerItemStyle: { display: 'none' },
+        }}
+      />
+
+      <Drawer.Screen
+        name="area-verification"
+        options={{
+          title: 'Area Verification',
+          drawerItemStyle: { display: 'none' },
+          headerShown: false,
         }}
       />
 

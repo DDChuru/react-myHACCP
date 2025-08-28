@@ -42,6 +42,7 @@ import {
 } from '../../types/iCleanVerification';
 import VerificationItemCard from '../../components/VerificationItemCard';
 import CompleteInspectionModal from '../../components/CompleteInspectionModal';
+import SCIViewerModal from '../../components/SCIViewerModal';
 
 type ScheduleTab = 'daily' | 'weekly' | 'monthly';
 
@@ -49,7 +50,7 @@ export default function AreaVerificationScreen() {
   const theme = useTheme();
   const router = useRouter();
   const params = useLocalSearchParams();
-  const { user, profile } = useAuth();
+  const { user, userProfile: profile } = useAuth();
   
   const areaId = params.areaId as string;
   const areaName = params.areaName as string;
@@ -61,6 +62,9 @@ export default function AreaVerificationScreen() {
   const [showCompleteModal, setShowCompleteModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState<AreaItemProgress | null>(null);
   const [filter, setFilter] = useState<'all' | 'pending' | 'overdue'>('all');
+  const [showSCIModal, setShowSCIModal] = useState(false);
+  const [selectedSCIId, setSelectedSCIId] = useState<string | null>(null);
+  const [selectedItemName, setSelectedItemName] = useState<string>('');
   
   // Initialize service
   const verificationService = new VerificationService(
@@ -95,9 +99,25 @@ export default function AreaVerificationScreen() {
   };
 
   const handleRefresh = useCallback(async () => {
+    console.log('[AreaVerification] Starting pull-to-refresh sync...');
     setRefreshing(true);
-    await loadProgress();
-    setRefreshing(false);
+    try {
+      // Force sync with Firestore
+      const freshProgress = await verificationService.syncWithFirestore(areaId);
+      if (freshProgress) {
+        setProgress(freshProgress);
+        console.log('[AreaVerification] Sync complete. Items loaded:', {
+          daily: freshProgress.scheduleGroups.daily.items.length,
+          weekly: freshProgress.scheduleGroups.weekly.items.length,
+          monthly: freshProgress.scheduleGroups.monthly.items.length
+        });
+      }
+    } catch (error) {
+      console.error('[AreaVerification] Refresh error:', error);
+      Alert.alert('Sync Failed', 'Unable to sync data. Please try again.');
+    } finally {
+      setRefreshing(false);
+    }
   }, [areaId]);
 
   const getCurrentScheduleGroup = (): ScheduleGroupProgress | null => {
@@ -327,10 +347,9 @@ export default function AreaVerificationScreen() {
       }}
       onViewSCI={() => {
         if (item.sciReference) {
-          router.push({
-            pathname: '/(drawer)/sci-viewer',
-            params: { sciId: item.sciReference, itemName: item.itemName }
-          });
+          setSelectedSCIId(item.sciReference);
+          setSelectedItemName(item.itemName);
+          setShowSCIModal(true);
         }
       }}
       colorScheme={STATUS_COLORS[item.status as VerificationStatus]}
@@ -394,6 +413,15 @@ export default function AreaVerificationScreen() {
         }}
         weeklyItems={progress?.scheduleGroups.weekly.items || []}
         monthlyItems={progress?.scheduleGroups.monthly.items || []}
+      />
+      
+      {/* SCI Viewer Modal */}
+      <SCIViewerModal
+        visible={showSCIModal}
+        onDismiss={() => setShowSCIModal(false)}
+        documentId={selectedSCIId}
+        companyId={profile?.companyId || ''}
+        itemName={selectedItemName}
       />
     </View>
   );

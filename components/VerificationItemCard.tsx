@@ -123,10 +123,23 @@ export default function VerificationItemCard({
             </View>
             
             <View style={styles.itemInfo}>
-              <Text variant="titleMedium" style={{ color: colors.text }}>
+              <Text variant="titleMedium" style={{ color: colors.text }} numberOfLines={2}>
                 {item.itemName}
               </Text>
               <View style={styles.metaRow}>
+                {item.frequency && (
+                  <>
+                    <View style={[styles.frequencyBadge, { 
+                      backgroundColor: item.frequency === 'daily' ? '#4caf50' : 
+                                      item.frequency === 'weekly' ? '#2196f3' : '#ff9800' 
+                    }]}>
+                      <Text variant="labelSmall" style={{ color: '#fff', textTransform: 'capitalize' }}>
+                        {item.frequency}
+                      </Text>
+                    </View>
+                    <Text style={{ color: colors.textSecondary }}> • </Text>
+                  </>
+                )}
                 <Text variant="bodySmall" style={{ color: colors.textSecondary }}>
                   {formatLastVerified()}
                 </Text>
@@ -148,13 +161,16 @@ export default function VerificationItemCard({
             
             <View style={styles.actions}>
               {item.photoCount > 0 && (
-                <Chip 
-                  icon="image" 
-                  style={[styles.photoChip, { backgroundColor: colors.surface }]}
-                  textStyle={{ color: colors.text, fontSize: 12 }}
-                >
-                  {item.photoCount}
-                </Chip>
+                <View style={styles.photoBadge}>
+                  <MaterialCommunityIcons 
+                    name="image" 
+                    size={14} 
+                    color={colors.textSecondary} 
+                  />
+                  <Text variant="labelSmall" style={{ color: colors.textSecondary }}>
+                    {item.photoCount}
+                  </Text>
+                </View>
               )}
               
               {isOffline && (
@@ -356,11 +372,27 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 4,
+    flexWrap: 'wrap',
+  },
+  frequencyBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+    marginRight: 4,
   },
   actions: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+  },
+  photoBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 12,
   },
   photoChip: {
     height: 24,
