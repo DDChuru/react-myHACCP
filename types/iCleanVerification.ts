@@ -17,23 +17,48 @@ import { Timestamp } from 'firebase/firestore';
  * This matches the existing InspectionModel interface from CLEANING_SYSTEM_INTERFACES.md
  */
 export interface InspectionModel {
-  id?: string;
+  // Critical: This is the areaItemId for reporting (NOT the Firestore doc ID)
+  id: string;                // The areaItemId (required for reports)
   
-  // Core References
-  areaItemId: string;        // Links to AreaItem
-  siteId: string;            // Links to Site
-  scheduleId?: string;       // Links to Schedule (Daily/Weekly/Monthly)
+  // Location references
+  siteId: string;            // The site ID
+  areaId: string;            // The area ID (separate from siteId)
+  area?: any;                // Full area object (for complete context)
   
-  // Verification Data (Only Pass/Fail per requirements)
-  status: 'pass' | 'fail';   // CRITICAL: Only two statuses
-  verifiedBy: string;        // User who performed verification
+  // Item details
+  itemDescription?: string;  // Description of the item being inspected
+  areaItemId?: string;       // Keep for backwards compatibility
+  
+  // Schedule information
+  schedule?: {
+    hours: number;
+    cycleId: number;
+    name: string;
+    days: number;
+    id: string;
+  };
+  scheduleId?: string;       // Schedule type (daily/weekly/monthly)
+  
+  // Status fields
+  status: 'pass' | 'fail';   // Our binary status (lowercase)
+  lastStatus?: string;       // Previous status ("Pass" or "Fail" capitalized)
+  scheduleStatus?: string;   // Schedule-specific status (capitalized)
+  
+  // User information
+  user?: any;                // Full user object for audit
+  verifiedBy: string;        // User ID who performed verification
+  
+  // Timestamps
+  date?: string;             // ISO date string for compatibility
   verifiedAt: Date | Timestamp; // Timestamp of verification
   
   // Additional Verification Details
-  notes?: string;            // Inspector notes (optional for all statuses)
-  issues?: string[];         // List of identified issues (typically for failures)
-  correctiveActions?: string[]; // Required actions
-  photos?: AnnotatedPhoto[]; // Photo evidence with annotation overlay
+  notes?: string;            // Inspector notes
+  reasonForFailure?: string; // Aligns with ACS structure
+  actionTaken?: string;      // Actions taken for failures
+  issues?: string[];         // List of identified issues
+  correctiveActions?: string[]; // Required corrective actions
+  photos?: AnnotatedPhoto[]; // Photo evidence with annotations
   
   // Signatures & Compliance
   signature?: string;        // Digital signature (base64)
@@ -44,10 +69,18 @@ export interface InspectionModel {
   };
   
   // Metadata
+  companyId: string;
   createdBy: string;
   createdAt: Date | Timestamp;
   updatedAt: Date | Timestamp;
-  companyId: string;
+  
+  // Flags (matching ACS structure)
+  firstInspection?: boolean;
+  deleted?: boolean;
+  serverInspection?: boolean;
+  
+  // Score/Weight (for reporting)
+  scoreWeight?: number;
   
   // Mobile Sync
   iCleanerSyncId?: string;   // Reference to mobile app sync

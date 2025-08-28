@@ -152,12 +152,51 @@ export default function AreaVerificationScreen() {
     return items;
   };
 
-  const handleVerifyItem = async (item: AreaItemProgress, status: 'pass' | 'fail') => {
+  const handleVerifyItem = async (item: AreaItemProgress, status: 'pass' | 'fail', notes?: string) => {
     try {
-      await verificationService.verifyItem(item.areaItemId, status, {
-        siteId: areaId,
+      // Build full context for inspection record (matching ACS structure)
+      const verificationDetails = {
+        // Location context
+        siteId: progress?.siteId || areaId,  // Use actual siteId if available
+        areaId: areaId,
+        area: {
+          id: areaId,
+          name: areaName,
+          // Add more area details if available in progress
+        },
+        
+        // Item details
+        itemDescription: item.itemName,
+        
+        // Schedule context
         scheduleId: activeTab,
-      });
+        schedule: {
+          id: activeTab,
+          name: activeTab === 'daily' ? 'Daily' : activeTab === 'weekly' ? 'Weekly' : 'Monthly',
+          days: activeTab === 'daily' ? 1 : activeTab === 'weekly' ? 7 : 30,
+          hours: activeTab === 'daily' ? 24 : activeTab === 'weekly' ? 168 : 720,
+          cycleId: activeTab === 'daily' ? 1 : activeTab === 'weekly' ? 2 : 3,
+        },
+        
+        // User context
+        user: profile ? {
+          id: user?.uid,
+          fullName: profile.fullName || profile.displayName,
+          email: user?.email,
+          companyId: profile.companyId,
+          roles: profile.roles,
+        } : undefined,
+        
+        // Failure details
+        notes: notes,
+        reasonForFailure: status === 'fail' ? notes : undefined,
+        
+        // Item metadata
+        scoreWeight: 1,
+        firstInspection: !item.verifiedAt,
+      };
+      
+      await verificationService.verifyItem(item.areaItemId, status, verificationDetails);
       
       // Reload progress to show updated status
       await loadProgress();

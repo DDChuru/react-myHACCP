@@ -296,17 +296,55 @@ export class VerificationService implements IVerificationService {
     updateItemInGroup(progress.scheduleGroups.weekly);
     updateItemInGroup(progress.scheduleGroups.monthly);
     
-    // Create inspection record for offline queue
+    // Create inspection record for offline queue (matching ACS structure)
     const inspection: Partial<InspectionModel> = {
-      areaItemId: itemId,
-      siteId: areaId,
-      status,
+      // Critical: id field is the areaItemId for reporting
+      id: itemId,
+      areaItemId: itemId,  // Keep for backwards compatibility
+      
+      // Location references
+      areaId: areaId,
+      siteId: details?.siteId || areaId,  // Site might be different from area
+      area: details?.area,  // Include full area object if provided
+      
+      // Item details
+      itemDescription: details?.itemDescription || item?.itemName,
+      
+      // Status fields (match ACS format)
+      status,  // 'pass' or 'fail' (lowercase)
+      lastStatus: status === 'pass' ? 'Pass' : 'Fail',  // Capitalized
+      scheduleStatus: status === 'pass' ? 'Pass' : 'Fail',
+      
+      // User information
       verifiedBy: this.userId,
+      user: details?.user,  // Include full user object if provided
+      
+      // Timestamps
+      date: new Date().toISOString(),
       verifiedAt: Timestamp.now(),
+      
+      // Failure details
+      reasonForFailure: status === 'fail' ? (details?.notes || details?.reasonForFailure) : null,
+      actionTaken: details?.actionTaken,
+      
+      // Schedule information
+      schedule: details?.schedule,
+      scheduleId: details?.scheduleId,
+      
+      // Metadata
       companyId: this.companyId,
       createdBy: this.userId,
       createdAt: Timestamp.now(),
       updatedAt: Timestamp.now(),
+      
+      // Flags
+      firstInspection: details?.firstInspection ?? false,
+      deleted: false,
+      serverInspection: true,
+      
+      // Score
+      scoreWeight: details?.scoreWeight ?? 1,
+      
       ...details
     };
     
@@ -352,18 +390,50 @@ export class VerificationService implements IVerificationService {
           item.isAutoCompleted = true;
           autoPassedIds.push(item.areaItemId);
           
-          // Create inspection record
+          // Create inspection record (matching ACS structure)
           const inspectionRef = doc(collection(db, `companies/${this.companyId}/inspections`));
           batch.set(inspectionRef, {
-            areaItemId: item.areaItemId,
-            siteId: areaId,
+            // Critical: id is the areaItemId for reporting
+            id: item.areaItemId,
+            areaItemId: item.areaItemId,  // Keep for backwards compatibility
+            
+            // Location references
+            areaId: areaId,
+            siteId: progress.siteId || areaId,
+            
+            // Item details
+            itemDescription: item.itemName,
+            
+            // Status fields (ACS format)
             status: 'pass',
+            lastStatus: 'Pass',
+            scheduleStatus: 'Pass',
+            
+            // User information
             verifiedBy: this.userId,
+            
+            // Timestamps
+            date: new Date().toISOString(),
             verifiedAt: Timestamp.now(),
+            
+            // Schedule information
+            scheduleId: 'daily',  // Auto-pass is for daily items
+            
+            // Metadata
             companyId: this.companyId,
             createdBy: this.userId,
             createdAt: Timestamp.now(),
             updatedAt: Timestamp.now(),
+            
+            // Flags
+            firstInspection: false,
+            deleted: false,
+            serverInspection: true,
+            
+            // Score
+            scoreWeight: 1,
+            
+            // Auto-completion tracking
             autoCompletionDetails: {
               dailyItemsAutoPassed: [item.areaItemId],
               manuallyVerified: [],
