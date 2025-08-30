@@ -18,11 +18,13 @@ import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { width, height } = Dimensions.get('window');
 
 const LoginScreen = () => {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -128,7 +130,7 @@ const LoginScreen = () => {
             style={styles.keyboardAvoidingView}
           >
             <ScrollView
-              contentContainerStyle={styles.scrollContainer}
+              contentContainerStyle={[styles.scrollContainer, { paddingTop: insets.top, paddingBottom: insets.bottom }]}
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="always"
               scrollEnabled={true}

@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { ScrollView, View, StyleSheet, RefreshControl, TouchableOpacity } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Surface, Text, Card, FAB, useTheme, List, Chip, ProgressBar, Avatar, IconButton, Banner, ActivityIndicator } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -8,9 +9,11 @@ import { useSync } from '../../hooks/useSync';
 import { useAuth } from '../../hooks/useAuth';
 import { useOffline } from '../../hooks/useOffline';
 import { getSelfInspections, SelfInspection } from '../../services/selfInspectionService';
+import { getFABPosition } from '../../utils/fabHelper';
 
 export default function SelfInspectionScreen() {
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { syncing, syncAll, lastSync, syncStatus } = useSync();
   const { isOffline, pendingItems, forceSync, hasPendingChanges } = useOffline();
@@ -360,7 +363,7 @@ export default function SelfInspectionScreen() {
 
       <FAB
         icon="plus"
-        style={styles.fab}
+        style={[styles.fab, getFABPosition(insets)]}
         onPress={() => router.push('/self-inspection/new')}
         label="New Inspection"
       />

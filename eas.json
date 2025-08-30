@@ -23,6 +23,22 @@
         "buildType": "apk",
         "image": "latest"
       },
+      "channel": "preview",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://iclean-field-service-4bddd.firebaseapp.com"
+      }
+    },
+    "internal": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk",
+        "image": "latest"
+      },
+      "ios": {
+        "simulator": false,
+        "distribution": "internal"
+      },
+      "channel": "internal",
       "env": {
         "EXPO_PUBLIC_API_URL": "https://iclean-field-service-4bddd.firebaseapp.com"
       }

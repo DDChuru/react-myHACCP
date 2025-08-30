@@ -35,7 +35,7 @@ function CustomDrawerContent(props: any) {
         scrollEnabled={true}
       >
         {/* Header - Improved spacing and balance */}
-        <Surface style={[styles.header, { backgroundColor: theme.colors.primaryContainer }]}>
+        <Surface style={[styles.header, { backgroundColor: theme.colors.primaryContainer, paddingTop: insets.top + 24 }]}>
           <Avatar.Text 
             size={56} 
             label={user?.email?.substring(0, 2).toUpperCase() || 'U'} 
@@ -132,7 +132,7 @@ function CustomDrawerContent(props: any) {
           {/* People & Training Section */}
           <RNText style={styles.sectionHeader}>PEOPLE & TRAINING</RNText>
           <DrawerItem
-            label="Crew Members"
+            label="Crew Member"
             icon={({ color, size }) => (
               <MaterialCommunityIcons name="account-group-outline" size={size} color={color} />
             )}
@@ -197,6 +197,7 @@ function CustomDrawerContent(props: any) {
 
 export default function DrawerLayout() {
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
 
   return (
     <Drawer
@@ -218,6 +219,7 @@ export default function DrawerLayout() {
         headerTitleStyle: {
           fontFamily: 'SpaceMono',
         },
+        headerStatusBarHeight: insets.top,
         // Ensure drawer overlays content properly with higher z-index
         overlayColor: 'rgba(0, 0, 0, 0.5)',
         sceneContainerStyle: {
@@ -295,7 +297,7 @@ export default function DrawerLayout() {
       <Drawer.Screen
         name="crew-members"
         options={{
-          title: 'Crew Members',
+          title: 'Crew Member',
           drawerItemStyle: { display: 'none' },
         }}
       />

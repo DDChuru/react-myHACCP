@@ -520,7 +520,8 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   statusChip: {
-    height: 24,
+    minHeight: 28,
+    paddingVertical: 2,
   },
   expandedContent: {
     marginTop: 16,

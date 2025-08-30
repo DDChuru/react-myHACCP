@@ -24,16 +24,21 @@ import {
   Button,
   ActivityIndicator,
   Modal,
+  useTheme,
 } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import CrewMemberService from '../../services/CrewMemberService';
 import { CrewMemberModel, CrewMemberFilters, CrewPosition } from '../../types/crewMember';
 import { useAuthProfile } from '../../hooks/useAuthProfile';
 import CrewMemberForm from '../../components/CrewMemberForm';
+import { getFABPosition, getListPaddingForFAB } from '../../utils/fabHelper';
 
 export default function CrewMembersScreen() {
   const router = useRouter();
+  const theme = useTheme();
+  const insets = useSafeAreaInsets();
   const { userProfile } = useAuthProfile();
   const [crewMembers, setCrewMembers] = useState<CrewMemberModel[]>([]);
   const [loading, setLoading] = useState(true);
@@ -325,7 +330,7 @@ export default function CrewMembersScreen() {
         data={crewMembers}
         renderItem={renderCrewMember}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[styles.listContent, { paddingBottom: getListPaddingForFAB(insets) }]}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
         }
@@ -335,7 +340,7 @@ export default function CrewMembersScreen() {
       {canManageCrewMembers && (
         <FAB
           icon="plus"
-          style={styles.fab}
+          style={[styles.fab, getFABPosition(insets)]}
           onPress={() => {
             console.log('[CrewMembers] FAB pressed, opening modal');
             setSelectedMember(null);
@@ -438,12 +443,14 @@ const styles = StyleSheet.create({
   },
   positionChip: {
     alignSelf: 'flex-start',
-    height: 24,
+    minHeight: 28,
     backgroundColor: '#e3f2fd',
+    paddingVertical: 2,
   },
   positionChipText: {
     fontSize: 12,
     color: '#1976d2',
+    lineHeight: 14,
   },
   memberContactInfo: {
     marginTop: 12,

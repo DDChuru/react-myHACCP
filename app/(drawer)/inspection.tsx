@@ -1,10 +1,13 @@
 import React from 'react';
 import { ScrollView, View, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Surface, Text, Card, FAB, useTheme, List, Chip, Avatar, ProgressBar } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { getFABPosition } from '../../utils/fabHelper';
 
 export default function InspectionScreen() {
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
 
   const inspections = [
     {
@@ -174,7 +177,7 @@ export default function InspectionScreen() {
 
       <FAB
         icon="calendar-plus"
-        style={styles.fab}
+        style={[styles.fab, getFABPosition(insets)]}
         onPress={() => {}}
         label="Schedule"
       />

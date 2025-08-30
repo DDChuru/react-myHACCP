@@ -1,10 +1,13 @@
 import React from 'react';
 import { ScrollView, View, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Surface, Text, Card, Chip, Avatar, useTheme, FAB } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { getFABPosition } from '../../../utils/fabHelper';
 
 export default function TasksScreen() {
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
 
   const tasks = [
     { id: '1', title: 'Morning Temperature Check', priority: 'high', due: '8:00 AM', status: 'overdue' },
@@ -37,7 +40,7 @@ export default function TasksScreen() {
           </Card>
         ))}
       </ScrollView>
-      <FAB icon="plus" style={styles.fab} onPress={() => {}} />
+      <FAB icon="plus" style={[styles.fab, getFABPosition(insets)]} onPress={() => {}} />
     </>
   );
 }

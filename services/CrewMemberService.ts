@@ -1,4 +1,4 @@
-import { db, auth } from '../firebase';
+import { db, auth, storage } from '../firebase';
 import { 
   collection, 
   doc, 
@@ -14,6 +14,12 @@ import {
   Query,
   DocumentData 
 } from 'firebase/firestore';
+import { 
+  ref, 
+  uploadBytes, 
+  getDownloadURL, 
+  deleteObject 
+} from 'firebase/storage';
 import { CrewMemberModel, CrewMemberFilters, CrewPosition } from '../types/crewMember';
 import AuthService from './AuthService';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
@@ -36,6 +42,55 @@ class CrewMemberService {
     const sanitizedName = fullName.toLowerCase().replace(/\s+/g, '.');
     const sanitizedCompany = companyName.toLowerCase().replace(/\s+/g, '');
     return `${sanitizedName}@${sanitizedCompany}.com`;
+  }
+
+  /**
+   * Upload crew member photo to Firebase Storage
+   */
+  async uploadCrewMemberPhoto(
+    photoUri: string, 
+    crewMemberId: string, 
+    companyId: string
+  ): Promise<string> {
+    try {
+      // Convert URI to blob
+      const response = await fetch(photoUri);
+      const blob = await response.blob();
+
+      // Create storage reference
+      const storageRef = ref(
+        storage, 
+        `companies/${companyId}/crewMembers/${crewMemberId}/photo.jpg`
+      );
+
+      // Upload the blob
+      const snapshot = await uploadBytes(storageRef, blob);
+      
+      // Get the download URL
+      const downloadURL = await getDownloadURL(snapshot.ref);
+      
+      return downloadURL;
+    } catch (error) {
+      console.error('[CrewMemberService] Error uploading photo:', error);
+      throw new Error('Failed to upload photo');
+    }
+  }
+
+  /**
+   * Delete crew member photo from Firebase Storage
+   */
+  async deleteCrewMemberPhoto(crewMemberId: string, companyId: string): Promise<void> {
+    try {
+      const storageRef = ref(
+        storage, 
+        `companies/${companyId}/crewMembers/${crewMemberId}/photo.jpg`
+      );
+      
+      await deleteObject(storageRef);
+    } catch (error) {
+      // Photo might not exist, which is okay
+      console.log('[CrewMemberService] Photo deletion failed (might not exist):', error);
+    }
   }
 
   /**
@@ -102,6 +157,9 @@ class CrewMemberService {
         siteIds = [data.primarySiteId];
       }
 
+      // Store the local photo URI temporarily
+      const localPhotoUri = data.photoUrl;
+      
       const crewMember: Partial<CrewMemberModel> = {
         ...data,
         email,
@@ -113,6 +171,7 @@ class CrewMemberService {
         createdAt: serverTimestamp() as any,
         updatedAt: serverTimestamp() as any,
         isActive: true,
+        photoUrl: undefined, // Don't save local URI yet
       };
 
       // Add to Firestore
@@ -120,6 +179,22 @@ class CrewMemberService {
         collection(db, this.getCollectionPath(companyId)),
         crewMember
       );
+
+      // Upload photo if provided
+      let photoUrl: string | undefined = undefined;
+      if (localPhotoUri && localPhotoUri.startsWith('file://')) {
+        try {
+          photoUrl = await this.uploadCrewMemberPhoto(localPhotoUri, docRef.id, companyId);
+          
+          // Update the document with the storage URL
+          await updateDoc(
+            doc(db, this.getCollectionPath(companyId), docRef.id),
+            { photoUrl }
+          );
+        } catch (photoError) {
+          console.error('[CrewMemberService] Photo upload failed, continuing without photo:', photoError);
+        }
+      }
 
       // Optionally create Firebase Auth account if real email
       if (email && !email.includes('@company.com')) {
@@ -139,6 +214,7 @@ class CrewMemberService {
       return {
         ...crewMember,
         id: docRef.id,
+        photoUrl: photoUrl || undefined,
       } as CrewMemberModel;
     } catch (error) {
       console.error('[CrewMemberService] Error creating crew member:', error);
@@ -182,12 +258,38 @@ class CrewMemberService {
         }
       }
 
+      // Handle photo upload if a new local photo is provided
+      let photoUrl = updates.photoUrl;
+      if (photoUrl && photoUrl.startsWith('file://')) {
+        try {
+          // Upload new photo
+          photoUrl = await this.uploadCrewMemberPhoto(photoUrl, crewMemberId, companyId);
+        } catch (photoError) {
+          console.error('[CrewMemberService] Photo upload failed during update:', photoError);
+          photoUrl = undefined; // Don't update photo if upload fails
+        }
+      }
+
+      // Prepare updates object
+      const finalUpdates: any = {
+        ...updates,
+        updatedAt: serverTimestamp(),
+      };
+
+      // Only update photoUrl if we have a valid URL or explicitly want to remove it
+      if (photoUrl !== undefined) {
+        finalUpdates.photoUrl = photoUrl;
+      } else if (updates.photoUrl === null) {
+        // Allow explicit removal of photo
+        finalUpdates.photoUrl = null;
+      } else {
+        // Don't update photoUrl field if no new photo
+        delete finalUpdates.photoUrl;
+      }
+
       await updateDoc(
         doc(db, this.getCollectionPath(companyId), crewMemberId),
-        {
-          ...updates,
-          updatedAt: serverTimestamp(),
-        }
+        finalUpdates
       );
     } catch (error) {
       console.error('[CrewMemberService] Error updating crew member:', error);
@@ -227,6 +329,15 @@ class CrewMemberService {
         }
       }
 
+      // Delete photo from storage if it exists
+      try {
+        await this.deleteCrewMemberPhoto(crewMemberId, companyId);
+      } catch (error) {
+        // Photo deletion failure shouldn't stop crew member deletion
+        console.log('[CrewMemberService] Photo deletion failed, continuing with member deletion');
+      }
+
+      // Delete the crew member document
       await deleteDoc(
         doc(db, this.getCollectionPath(companyId), crewMemberId)
       );

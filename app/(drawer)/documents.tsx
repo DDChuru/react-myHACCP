@@ -22,6 +22,8 @@ import {
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { getFABPosition, getListPaddingForFAB } from '../../utils/fabHelper';
 
 interface Document {
   id: string;
@@ -36,6 +38,7 @@ interface Document {
 
 export default function DocumentsScreen() {
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [dialogVisible, setDialogVisible] = useState(false);
@@ -361,7 +364,7 @@ export default function DocumentsScreen() {
       {/* FAB for New Document */}
       <FAB
         icon="plus"
-        style={styles.fab}
+        style={[styles.fab, getFABPosition(insets)]}
         onPress={() => setDialogVisible(true)}
         label="New Document"
       />

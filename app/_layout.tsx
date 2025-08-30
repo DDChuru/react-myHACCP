@@ -10,6 +10,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { PaperProvider } from 'react-native-paper';
 import { lightTheme, darkTheme } from '../theme/paperTheme';
 import { SCIProvider } from '../contexts/SCIContext';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { useColorScheme } from '@/hooks/useColorScheme';
 
@@ -110,17 +111,19 @@ export default function RootLayout() {
   }
 
   return (
-    <AuthProvider>
-      <AuthProfileProvider>
-        <PaperProvider theme={colorScheme === 'dark' ? darkTheme : lightTheme}>
-          <SCIProvider>
-            <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-              <InitialLayout loaded={loaded} />
-              <StatusBar style="auto" />
-            </ThemeProvider>
-          </SCIProvider>
-        </PaperProvider>
-      </AuthProfileProvider>
-    </AuthProvider>
+    <SafeAreaProvider>
+      <AuthProvider>
+        <AuthProfileProvider>
+          <PaperProvider theme={colorScheme === 'dark' ? darkTheme : lightTheme}>
+            <SCIProvider>
+              <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+                <InitialLayout loaded={loaded} />
+                <StatusBar style="auto" />
+              </ThemeProvider>
+            </SCIProvider>
+          </PaperProvider>
+        </AuthProfileProvider>
+      </AuthProvider>
+    </SafeAreaProvider>
   );
 }

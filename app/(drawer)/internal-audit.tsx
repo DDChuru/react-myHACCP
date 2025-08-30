@@ -1,10 +1,13 @@
 import React from 'react';
 import { ScrollView, View, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Surface, Text, Card, FAB, useTheme, DataTable, Chip, Avatar } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { getFABPosition } from '../../utils/fabHelper';
 
 export default function InternalAuditScreen() {
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
 
   const audits = [
     {
@@ -131,7 +134,7 @@ export default function InternalAuditScreen() {
 
       <FAB
         icon="plus"
-        style={styles.fab}
+        style={[styles.fab, getFABPosition(insets)]}
         onPress={() => {}}
         label="Schedule Audit"
       />

@@ -4,9 +4,11 @@ import { Platform, View } from 'react-native';
 import { useTheme, Badge } from 'react-native-paper';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { DrawerToggleButton } from '@react-navigation/drawer';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function TabLayout() {
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
 
   return (
     <Tabs
@@ -17,19 +19,21 @@ export default function TabLayout() {
           backgroundColor: theme.colors.surface,
           borderTopColor: theme.colors.outline,
           borderTopWidth: 1,
-          height: Platform.OS === 'ios' ? 85 : 60,
-          paddingBottom: Platform.OS === 'ios' ? 25 : 5,
+          height: Platform.OS === 'ios' ? 49 + insets.bottom : 56,
+          paddingBottom: insets.bottom,
           paddingTop: 5,
         },
         tabBarLabelStyle: {
           fontSize: 12,
           fontFamily: 'SpaceMono',
+          marginBottom: Platform.OS === 'ios' ? 0 : 5,
         },
         headerStyle: {
           backgroundColor: theme.colors.primaryContainer,
         },
         headerTintColor: theme.colors.onPrimaryContainer,
         headerLeft: () => <DrawerToggleButton tintColor={theme.colors.onPrimaryContainer} />,
+        headerStatusBarHeight: insets.top,
       }}
     >
       <Tabs.Screen

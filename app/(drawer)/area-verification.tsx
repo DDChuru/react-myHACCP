@@ -13,6 +13,7 @@ import {
   RefreshControl,
   Pressable,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   Text,
   Card,
@@ -51,6 +52,7 @@ export default function AreaVerificationScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const { user, userProfile: profile } = useAuth();
+  const insets = useSafeAreaInsets();
   
   const areaId = params.areaId as string;
   const areaName = params.areaName as string;
@@ -504,15 +506,16 @@ export default function AreaVerificationScreen() {
       {renderProgressHeader()}
       {renderScheduleTabs()}
       
-      <FlatList
-        data={items}
-        renderItem={renderItem}
-        keyExtractor={(item) => item.areaItemId}
-        contentContainerStyle={styles.listContent}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
-        }
-        ListEmptyComponent={
+      <View style={{ flex: 1 }}>
+        <FlatList
+          data={items}
+          renderItem={renderItem}
+          keyExtractor={(item) => item.areaItemId}
+          contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 120 }]}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+          }
+          ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <MaterialCommunityIcons 
               name="checkbox-marked-circle-outline" 
@@ -529,7 +532,23 @@ export default function AreaVerificationScreen() {
             </Text>
           </View>
         }
-      />
+        />
+        
+        {/* Bottom overlay to hide content scrolling under navigation bar */}
+        <View 
+          style={{
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: insets.bottom,
+            backgroundColor: colors.background,
+            borderTopWidth: 1,
+            borderTopColor: colors.border,
+          }}
+          pointerEvents="none"
+        />
+      </View>
       
       {/* Exit Area FAB - Always visible in top left */}
       <FAB
@@ -548,7 +567,7 @@ export default function AreaVerificationScreen() {
             ]
           );
         }}
-        style={[styles.exitFab, { backgroundColor: colors.surface }]}
+        style={[styles.exitFab, { backgroundColor: colors.surface, bottom: insets.bottom + 16 }]}
         color={colors.text}
       />
       
@@ -561,7 +580,8 @@ export default function AreaVerificationScreen() {
           style={[styles.fab, { 
             backgroundColor: progress?.scheduleGroups[activeTab].completedCount === progress?.scheduleGroups[activeTab].totalCount 
               ? STATUS_COLORS.pass.background 
-              : '#ff9800' 
+              : '#ff9800',
+            bottom: insets.bottom + 16
           }]}
           color="#fff"
         />
@@ -626,7 +646,7 @@ const styles = StyleSheet.create({
   },
   header: {
     padding: 16,
-    paddingTop: 12,
+    paddingTop: 16,
     paddingBottom: 12,
   },
   headerRow: {
@@ -683,6 +703,8 @@ const styles = StyleSheet.create({
   },
   filterChip: {
     marginRight: 8,
+    minHeight: 32,
+    paddingVertical: 2,
   },
   listContent: {
     padding: 16,

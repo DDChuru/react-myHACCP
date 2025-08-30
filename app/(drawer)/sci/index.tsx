@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, FlatList, RefreshControl, ScrollView } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   Surface,
   Text,
@@ -16,10 +17,12 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useSCI } from '../../../contexts/SCIContext';
 import { SCIDocument } from '../../../types/sci';
+import { getFABPosition } from '../../../utils/fabHelper';
 
 export default function SCIDocumentListScreen() {
   const theme = useTheme();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { documents, loadDocuments, isLoading, imageQueue, isSyncing, syncImageQueue, selectDocument } = useSCI();
   
   const [searchQuery, setSearchQuery] = useState('');
@@ -263,7 +266,7 @@ export default function SCIDocumentListScreen() {
       {/* FAB for quick actions */}
       <FAB
         icon="qrcode-scan"
-        style={styles.fab}
+        style={[styles.fab, getFABPosition(insets)]}
         onPress={() => {
           // Future: QR code scanning for quick document access
           alert('QR scanning coming soon!');
