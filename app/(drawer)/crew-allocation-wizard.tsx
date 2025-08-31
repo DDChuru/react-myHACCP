@@ -335,6 +335,12 @@ export default function CrewAllocationWizardScreen() {
                 </Text>
               </Card.Content>
             </Card>
+            
+            {allocationMode && (
+              <Text variant="bodySmall" style={styles.selectionHint}>
+                ✓ {allocationMode === 'crew-to-areas' ? 'Crew to Areas' : 'Areas to Crew'} selected
+              </Text>
+            )}
           </View>
         );
 
@@ -723,7 +729,13 @@ export default function CrewAllocationWizardScreen() {
             
             <ProgressBar progress={getStepProgress()} style={styles.progressBar} />
             
-            {renderWizardContent()}
+            <ScrollView 
+              style={styles.wizardScrollView}
+              contentContainerStyle={styles.wizardScrollContent}
+              showsVerticalScrollIndicator={true}
+            >
+              {renderWizardContent()}
+            </ScrollView>
             
             <View style={styles.wizardFooter}>
               {wizardStep !== 'choose-mode' && (
@@ -818,11 +830,14 @@ const styles = StyleSheet.create({
   // Wizard styles
   wizardModal: {
     margin: 20,
+    flex: 1,
+    justifyContent: 'center',
   },
   wizardContainer: {
     backgroundColor: '#ffffff',
     borderRadius: 12,
-    maxHeight: '90%',
+    maxHeight: '80%',
+    overflow: 'hidden',
   },
   wizardHeader: {
     flexDirection: 'row',
@@ -840,16 +855,24 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     marginBottom: 16,
   },
-  wizardContent: {
+  wizardScrollView: {
     flex: 1,
+  },
+  wizardScrollContent: {
+    flexGrow: 1,
+  },
+  wizardContent: {
     paddingHorizontal: 16,
-    minHeight: 400,
+    paddingBottom: 16,
   },
   wizardFooter: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
     padding: 16,
     gap: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+    backgroundColor: '#ffffff',
   },
   footerButton: {
     minWidth: 100,
@@ -858,12 +881,13 @@ const styles = StyleSheet.create({
   // Step: Choose Mode
   instructionText: {
     textAlign: 'center',
-    marginBottom: 24,
+    marginBottom: 16,
     color: '#666',
+    fontSize: 14,
   },
   modeCard: {
-    marginBottom: 16,
-    elevation: 2,
+    marginBottom: 12,
+    elevation: 1,
   },
   selectedCard: {
     borderWidth: 2,
@@ -871,16 +895,25 @@ const styles = StyleSheet.create({
   },
   modeCardContent: {
     alignItems: 'center',
-    paddingVertical: 24,
+    paddingVertical: 16,
+    paddingHorizontal: 12,
   },
   modeTitle: {
-    marginTop: 12,
-    marginBottom: 8,
+    marginTop: 8,
+    marginBottom: 4,
     color: '#000',
+    fontSize: 16,
   },
   modeDescription: {
     textAlign: 'center',
     color: '#666',
+    fontSize: 12,
+  },
+  selectionHint: {
+    textAlign: 'center',
+    color: '#4caf50',
+    marginTop: 12,
+    fontWeight: '600',
   },
   
   // Step: Selection
