@@ -35,7 +35,7 @@ import {
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../../hooks/useAuth';
 import { CrewAllocationService } from '../../services/CrewAllocationService';
-import { CrewMemberService } from '../../services/CrewMemberService';
+import CrewMemberService from '../../services/CrewMemberService';
 import {
   CrewAreaAllocation,
   CrewAllocationSummary,
@@ -101,14 +101,12 @@ export default function CrewAllocationScreen() {
     user?.uid || ''
   );
   
-  const crewMemberService = new CrewMemberService(
-    userProfile?.companyId || '',
-    user?.uid || '',
-    userProfile?.role || 'viewer'
-  );
+  // CrewMemberService is already instantiated as a singleton
+  const crewMemberService = CrewMemberService;
 
   useEffect(() => {
     if (userProfile?.companyId) {
+      console.log('[CrewAllocation] Loading data for company:', userProfile.companyId);
       loadData();
     }
   }, [userProfile, filters]);
@@ -116,21 +114,25 @@ export default function CrewAllocationScreen() {
   const loadData = async () => {
     setLoading(true);
     try {
+      console.log('[CrewAllocation] Starting data load...');
+      
       // Load allocations
       const allocationsData = await allocationService.getAllocations(filters);
+      console.log('[CrewAllocation] Loaded allocations:', allocationsData.length);
       setAllocations(allocationsData);
       
       // Load crew members
       const crewData = await crewMemberService.getCrewMembers({ 
         siteId: userProfile?.siteId 
       });
+      console.log('[CrewAllocation] Loaded crew members:', crewData.length);
       setCrewMembers(crewData);
       
       // Load areas
       await loadAreas();
     } catch (error) {
-      console.error('Error loading data:', error);
-      Alert.alert('Error', 'Failed to load data');
+      console.error('[CrewAllocation] Error loading data:', error);
+      Alert.alert('Error', 'Failed to load data: ' + (error as Error).message);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -138,9 +140,13 @@ export default function CrewAllocationScreen() {
   };
 
   const loadAreas = async () => {
-    if (!userProfile?.companyId || !userProfile?.siteId) return;
+    if (!userProfile?.companyId || !userProfile?.siteId) {
+      console.log('[CrewAllocation] Missing profile data for areas');
+      return;
+    }
     
     try {
+      console.log('[CrewAllocation] Loading areas for site:', userProfile.siteId);
       const areasRef = collection(db, `companies/${userProfile.companyId}/siteAreas`);
       const q = query(areasRef, where('siteId', '==', userProfile.siteId));
       const snapshot = await getDocs(q);
@@ -150,9 +156,10 @@ export default function CrewAllocationScreen() {
         ...doc.data()
       } as SiteArea));
       
+      console.log('[CrewAllocation] Loaded areas:', areasData.length);
       setAreas(areasData);
     } catch (error) {
-      console.error('Error loading areas:', error);
+      console.error('[CrewAllocation] Error loading areas:', error);
     }
   };
 
@@ -496,8 +503,11 @@ export default function CrewAllocationScreen() {
   const renderContent = () => {
     if (loading && !refreshing) {
       return (
-        <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" />
+        <View style={[styles.centerContainer, { backgroundColor: '#f5f5f5' }]}>
+          <ActivityIndicator size="large" color="#6200ee" />
+          <Text variant="bodyLarge" style={{ marginTop: 16, color: '#666' }}>
+            Loading data...
+          </Text>
         </View>
       );
     }
@@ -908,9 +918,11 @@ export default function CrewAllocationScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#f5f5f5',
   },
   header: {
     padding: 16,
+    backgroundColor: '#ffffff',
     paddingTop: 8,
   },
   searchbar: {
@@ -924,6 +936,7 @@ const styles = StyleSheet.create({
   },
   card: {
     marginBottom: 12,
+    backgroundColor: '#ffffff',
   },
   cardHeader: {
     flexDirection: 'row',
@@ -1008,6 +1021,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 32,
+    backgroundColor: '#f5f5f5',
   },
   emptyText: {
     marginVertical: 16,
@@ -1020,7 +1034,7 @@ const styles = StyleSheet.create({
     bottom: 0,
   },
   modal: {
-    backgroundColor: 'white',
+    backgroundColor: '#ffffff',
     padding: 20,
     margin: 20,
     borderRadius: 8,
