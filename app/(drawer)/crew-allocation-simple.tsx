@@ -45,7 +45,9 @@ interface SimpleAllocation {
   id?: string;
   crewMemberId: string;
   crewMemberName: string;
-  areaName: string; // Free text input instead of selecting from list
+  areaId?: string; // ID of the area from siteAreas collection
+  areaName: string; // Name of the area
+  siteId: string; // Required for filtering by site
   assignmentType: 'primary' | 'secondary' | 'backup' | 'temporary';
   shift: 'morning' | 'afternoon' | 'night' | 'rotating';
   workDays?: string[];
@@ -53,6 +55,15 @@ interface SimpleAllocation {
   companyId: string;
   createdAt?: Date | Timestamp;
   createdBy: string;
+}
+
+// Site Area interface
+interface SiteArea {
+  id: string;
+  areaName: string;
+  siteId: string;
+  description?: string;
+  [key: string]: any;
 }
 
 // Predefined areas for quick selection
@@ -81,6 +92,7 @@ export default function CrewAllocationSimpleScreen() {
   // State
   const [allocations, setAllocations] = useState<SimpleAllocation[]>([]);
   const [crewMembers, setCrewMembers] = useState<CrewMemberModel[]>([]);
+  const [siteAreas, setSiteAreas] = useState<SiteArea[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showModal, setShowModal] = useState(false);
@@ -97,33 +109,68 @@ export default function CrewAllocationSimpleScreen() {
   const crewMemberService = CrewMemberService;
 
   useEffect(() => {
-    if (userProfile?.companyId) {
+    if (userProfile?.companyId && userProfile?.siteId) {
+      console.log('[CrewAllocation] Profile loaded:', {
+        companyId: userProfile.companyId,
+        siteId: userProfile.siteId,
+        role: userProfile.role
+      });
       loadData();
+    } else {
+      console.log('[CrewAllocation] Waiting for profile...', {
+        hasCompanyId: !!userProfile?.companyId,
+        hasSiteId: !!userProfile?.siteId
+      });
     }
   }, [userProfile]);
 
   const loadData = async () => {
-    if (!userProfile?.companyId) return;
+    if (!userProfile?.companyId || !userProfile?.siteId) {
+      console.log('[CrewAllocation] Missing required profile data');
+      return;
+    }
     
     setLoading(true);
     try {
+      console.log('[CrewAllocation] Loading data with:', {
+        companyId: userProfile.companyId,
+        siteId: userProfile.siteId
+      });
+
+      // Load site areas - THESE EXIST!
+      const areasRef = collection(db, `companies/${userProfile.companyId}/siteAreas`);
+      const areasQuery = query(areasRef, where('siteId', '==', userProfile.siteId));
+      console.log('[CrewAllocation] Querying siteAreas:', `companies/${userProfile.companyId}/siteAreas where siteId == ${userProfile.siteId}`);
+      
+      const areasSnapshot = await getDocs(areasQuery);
+      const siteAreasData = areasSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      } as SiteArea));
+      console.log('[CrewAllocation] Loaded site areas:', siteAreasData.length, siteAreasData);
+      setSiteAreas(siteAreasData);
+
       // Load crew members
       const crewData = await crewMemberService.getCrewMembers({ 
-        siteId: userProfile?.siteId 
+        siteId: userProfile.siteId 
       });
+      console.log('[CrewAllocation] Loaded crew members:', crewData.length);
       setCrewMembers(crewData);
       
-      // Load allocations
+      // Load allocations filtered by siteId
       const allocationsRef = collection(db, `companies/${userProfile.companyId}/crewAllocations`);
-      const snapshot = await getDocs(allocationsRef);
+      const allocationsQuery = query(allocationsRef, where('siteId', '==', userProfile.siteId));
+      const snapshot = await getDocs(allocationsQuery);
       const allocationsData = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       } as SimpleAllocation));
+      console.log('[CrewAllocation] Loaded allocations:', allocationsData.length);
       setAllocations(allocationsData);
       
     } catch (error) {
-      console.error('Error loading data:', error);
+      console.error('[CrewAllocation] Error loading data:', error);
+      Alert.alert('Error', `Failed to load data: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -131,7 +178,7 @@ export default function CrewAllocationSimpleScreen() {
 
   const handleCreateAllocation = async () => {
     if (!formData.crewMemberId || !formData.areaName) {
-      Alert.alert('Error', 'Please select crew member and enter area name');
+      Alert.alert('Error', 'Please select crew member and area');
       return;
     }
 
@@ -141,10 +188,13 @@ export default function CrewAllocationSimpleScreen() {
       const newAllocation: SimpleAllocation = {
         ...formData as SimpleAllocation,
         crewMemberName: crew?.fullName || '',
+        siteId: userProfile?.siteId || '', // Add siteId from user profile
         companyId: userProfile?.companyId || '',
         createdBy: user?.uid || '',
         createdAt: Timestamp.now(),
       };
+      
+      console.log('[CrewAllocation] Creating allocation:', newAllocation);
       
       const allocationsRef = collection(db, `companies/${userProfile?.companyId}/crewAllocations`);
       await addDoc(allocationsRef, newAllocation);
@@ -320,6 +370,16 @@ export default function CrewAllocationSimpleScreen() {
           ]}
           style={styles.segmentedButtons}
         />
+        
+        {/* Debug info */}
+        <View style={styles.debugInfo}>
+          <Text variant="bodySmall" style={styles.debugText}>
+            Site: {userProfile?.siteId || 'Loading...'} | 
+            Areas: {siteAreas.length} | 
+            Crew: {crewMembers.length} | 
+            Allocations: {allocations.length}
+          </Text>
+        </View>
       </Surface>
 
       {viewMode === 'list' ? (
@@ -387,29 +447,53 @@ export default function CrewAllocationSimpleScreen() {
             </RadioButton.Group>
 
             <Text variant="labelLarge" style={styles.label}>Select Area</Text>
-            <View style={styles.areaSelection}>
-              {COMMON_AREAS.slice(0, 6).map(area => (
-                <Chip
-                  key={area}
-                  mode={formData.areaName === area ? 'flat' : 'outlined'}
-                  onPress={() => setFormData(prev => ({ ...prev, areaName: area }))}
-                  style={styles.areaChip}
-                >
-                  {area}
-                </Chip>
-              ))}
-            </View>
-            
-            <TextInput
-              label="Or enter custom area"
-              value={customArea}
-              onChangeText={text => {
-                setCustomArea(text);
-                setFormData(prev => ({ ...prev, areaName: text }));
-              }}
-              mode="outlined"
-              style={styles.input}
-            />
+            {siteAreas.length > 0 ? (
+              <RadioButton.Group
+                onValueChange={value => {
+                  const selectedArea = siteAreas.find(a => a.id === value);
+                  setFormData(prev => ({ 
+                    ...prev, 
+                    areaId: value,
+                    areaName: selectedArea?.areaName || ''
+                  }));
+                }}
+                value={formData.areaId || ''}
+              >
+                {siteAreas.map(area => (
+                  <RadioButton.Item
+                    key={area.id}
+                    label={`${area.areaName} ${area.description ? `- ${area.description}` : ''}`}
+                    value={area.id}
+                  />
+                ))}
+              </RadioButton.Group>
+            ) : (
+              <>
+                <View style={styles.areaSelection}>
+                  {COMMON_AREAS.slice(0, 6).map(area => (
+                    <Chip
+                      key={area}
+                      mode={formData.areaName === area ? 'flat' : 'outlined'}
+                      onPress={() => setFormData(prev => ({ ...prev, areaName: area }))}
+                      style={styles.areaChip}
+                    >
+                      {area}
+                    </Chip>
+                  ))}
+                </View>
+                
+                <TextInput
+                  label="Or enter custom area"
+                  value={customArea}
+                  onChangeText={text => {
+                    setCustomArea(text);
+                    setFormData(prev => ({ ...prev, areaName: text }));
+                  }}
+                  mode="outlined"
+                  style={styles.input}
+                />
+              </>
+            )}
 
             <Text variant="labelLarge" style={styles.label}>Assignment Type</Text>
             <RadioButton.Group
@@ -481,6 +565,15 @@ const styles = StyleSheet.create({
   },
   segmentedButtons: {
     marginBottom: 8,
+  },
+  debugInfo: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    backgroundColor: '#e3f2fd',
+    borderRadius: 4,
+  },
+  debugText: {
+    color: '#1976d2',
   },
   scrollView: {
     flex: 1,
