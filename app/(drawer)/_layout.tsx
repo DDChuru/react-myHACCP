@@ -146,7 +146,7 @@ function CustomDrawerContent(props: any) {
             icon={({ color, size }) => (
               <MaterialCommunityIcons name="account-switch-outline" size={size} color={color} />
             )}
-            onPress={() => props.navigation.navigate('crew-allocation-simple')}
+            onPress={() => props.navigation.navigate('crew-allocation-wizard')}
             activeTintColor={theme.colors.primary}
             inactiveTintColor={theme.colors.onSurfaceVariant}
             style={[styles.drawerItem, styles.indentedItem]}
@@ -322,6 +322,14 @@ export default function DrawerLayout() {
 
       <Drawer.Screen
         name="crew-allocation-simple"
+        options={{
+          title: 'Crew Allocation',
+          drawerItemStyle: { display: 'none' },
+        }}
+      />
+
+      <Drawer.Screen
+        name="crew-allocation-wizard"
         options={{
           title: 'Crew Allocation',
           drawerItemStyle: { display: 'none' },
