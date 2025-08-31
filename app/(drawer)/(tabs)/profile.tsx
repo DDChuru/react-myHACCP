@@ -69,7 +69,10 @@ export default function ProfileScreen() {
         />
         <List.Item
           title="Check for Updates"
-          description={`Channel: ${getUpdateInfo().channel || 'production'} | Version: ${getUpdateInfo().runtimeVersion || 'N/A'}`}
+          description={(() => {
+            const info = getUpdateInfo();
+            return `Channel: ${info.channel} | Version: ${info.runtimeVersion}`;
+          })()}
           left={() => <List.Icon icon="cloud-download" />}
           onPress={() => checkForAppUpdates(true)}
         />

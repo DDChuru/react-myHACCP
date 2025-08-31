@@ -1,8 +1,15 @@
-import * as Updates from 'expo-updates';
 import { Alert } from 'react-native';
 
+// Conditionally import expo-updates only if available
+let Updates: any = null;
+try {
+  Updates = require('expo-updates');
+} catch (error) {
+  console.log('[Updates] expo-updates not available in this build');
+}
+
 export async function checkForAppUpdates(showAlert: boolean = true) {
-  if (!Updates.isEnabled) {
+  if (!Updates || !Updates.isEnabled) {
     if (showAlert) {
       Alert.alert('Updates Disabled', 'Updates are not enabled in this build');
     }
@@ -63,12 +70,23 @@ export async function checkForAppUpdates(showAlert: boolean = true) {
 }
 
 export function getUpdateInfo() {
+  if (!Updates) {
+    return {
+      isEnabled: false,
+      channel: 'development',
+      runtimeVersion: 'dev',
+      updateId: null,
+      createdAt: null,
+      isEmbeddedLaunch: true,
+    };
+  }
+  
   return {
-    isEnabled: Updates.isEnabled,
-    channel: Updates.channel,
-    runtimeVersion: Updates.runtimeVersion,
-    updateId: Updates.updateId,
-    createdAt: Updates.createdAt,
-    isEmbeddedLaunch: Updates.isEmbeddedLaunch,
+    isEnabled: Updates.isEnabled || false,
+    channel: Updates.channel || 'development',
+    runtimeVersion: Updates.runtimeVersion || 'dev',
+    updateId: Updates.updateId || null,
+    createdAt: Updates.createdAt || null,
+    isEmbeddedLaunch: Updates.isEmbeddedLaunch || true,
   };
 }
