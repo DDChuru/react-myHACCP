@@ -19,9 +19,11 @@ export default function TabLayout() {
           backgroundColor: theme.colors.surface,
           borderTopColor: theme.colors.outline,
           borderTopWidth: 1,
-          height: Platform.OS === 'ios' ? 49 + insets.bottom : 56,
-          paddingBottom: insets.bottom,
+          height: Platform.OS === 'ios' ? 49 + insets.bottom : 56 + insets.bottom,
+          paddingBottom: Platform.OS === 'ios' ? insets.bottom : insets.bottom > 0 ? insets.bottom : 5,
           paddingTop: 5,
+          position: 'absolute',
+          elevation: 8,
         },
         tabBarLabelStyle: {
           fontSize: 12,

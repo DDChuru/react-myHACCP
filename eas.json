@@ -15,7 +15,8 @@
       },
       "env": {
         "EXPO_PUBLIC_API_URL": "https://iclean-field-service-4bddd.firebaseapp.com"
-      }
+      },
+      "channel": "development"
     },
     "preview": {
       "distribution": "internal",
@@ -50,7 +51,8 @@
       },
       "env": {
         "EXPO_PUBLIC_API_URL": "https://iclean-field-service-4bddd.firebaseapp.com"
-      }
+      },
+      "channel": "production"
     }
   },
   "submit": {

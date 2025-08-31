@@ -57,7 +57,11 @@ export default function CrewMembersScreen() {
   console.log('[CrewMembers] User roles:', { 
     email: userProfile?.email,
     roles: userProfile?.roles,
-    canManage: canManageCrewMembers 
+    isSiteAdmin,
+    isAdmin,
+    canManage: canManageCrewMembers,
+    userProfileExists: !!userProfile,
+    rolesObject: JSON.stringify(userProfile?.roles)
   });
 
   const positions = CrewMemberService.getAvailablePositions();

@@ -35,19 +35,30 @@
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }
+      ],
+      [
+        "expo-font",
+        {
+          "fonts": [
+            "./assets/fonts/SpaceMono-Regular.ttf"
+          ]
+        }
       ]
     ],
     "experiments": {
       "typedRoutes": true
     },
     "updates": {
-      "enabled": false
+      "enabled": true,
+      "url": "https://u.expo.dev/aad6078e-5973-4d40-af74-7b4de12706ae",
+      "fallbackToCacheTimeout": 30000
     },
     "extra": {
       "router": {},
       "eas": {
         "projectId": "aad6078e-5973-4d40-af74-7b4de12706ae"
       }
-    }
+    },
+    "runtimeVersion": "1.0.0"
   }
 }

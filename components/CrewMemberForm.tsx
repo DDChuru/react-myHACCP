@@ -157,7 +157,7 @@ export default function CrewMemberForm({
         phoneNumber: phoneNumber.trim() || undefined,
         position,
         employeeNumber: employeeNumber.trim() || undefined,
-        photoUrl: photoUri,
+        photoUrl: photoUri || undefined, // Ensure undefined instead of null
         primarySiteId: selectedSiteId,
       };
 

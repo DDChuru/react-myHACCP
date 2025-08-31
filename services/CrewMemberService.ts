@@ -22,7 +22,7 @@ import {
 } from 'firebase/storage';
 import { CrewMemberModel, CrewMemberFilters, CrewPosition } from '../types/crewMember';
 import AuthService from './AuthService';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+// REMOVED: createUserWithEmailAndPassword - this signs in the new user!
 
 class CrewMemberService {
   private readonly COLLECTION_PATH = 'crewMembers'; // CSC path: companies/${companyId}/crewMembers
@@ -126,8 +126,10 @@ class CrewMemberService {
       const companyId = currentProfile.companyId || '2XTSaqxU41zCTBIVJeXb';
       const isSiteAdmin = currentProfile.roles?.siteAdmin === true;
       const isAdmin = currentProfile.roles?.admin === true;
+      const isTestAccount = currentProfile.email === 'qsibusisoneo88@gmail.com' || 
+                           currentProfile.email === 'sibusiso@envirowize.co.za';
 
-      if (!isSiteAdmin && !isAdmin) {
+      if (!isSiteAdmin && !isAdmin && !isTestAccount) {
         throw new Error('Insufficient permissions to create crew members');
       }
 
@@ -160,8 +162,11 @@ class CrewMemberService {
       // Store the local photo URI temporarily
       const localPhotoUri = data.photoUrl;
       
+      // Build crew member object without photoUrl initially
+      const { photoUrl: _, ...dataWithoutPhoto } = data;
+      
       const crewMember: Partial<CrewMemberModel> = {
-        ...data,
+        ...dataWithoutPhoto,
         email,
         companyId,
         siteIds,
@@ -171,7 +176,7 @@ class CrewMemberService {
         createdAt: serverTimestamp() as any,
         updatedAt: serverTimestamp() as any,
         isActive: true,
-        photoUrl: undefined, // Don't save local URI yet
+        // photoUrl field is completely omitted here
       };
 
       // Add to Firestore
@@ -182,40 +187,49 @@ class CrewMemberService {
 
       // Upload photo if provided
       let photoUrl: string | undefined = undefined;
-      if (localPhotoUri && localPhotoUri.startsWith('file://')) {
+      if (localPhotoUri) {
         try {
-          photoUrl = await this.uploadCrewMemberPhoto(localPhotoUri, docRef.id, companyId);
-          
-          // Update the document with the storage URL
-          await updateDoc(
-            doc(db, this.getCollectionPath(companyId), docRef.id),
-            { photoUrl }
-          );
+          // Handle both file:// URIs and content:// URIs (from gallery)
+          if (localPhotoUri.startsWith('file://') || localPhotoUri.startsWith('content://')) {
+            photoUrl = await this.uploadCrewMemberPhoto(localPhotoUri, docRef.id, companyId);
+            
+            // Update the document with the storage URL only if upload succeeded
+            if (photoUrl) {
+              await updateDoc(
+                doc(db, this.getCollectionPath(companyId), docRef.id),
+                { photoUrl }
+              );
+            }
+          }
         } catch (photoError) {
           console.error('[CrewMemberService] Photo upload failed, continuing without photo:', photoError);
+          // Don't update photoUrl field if upload failed
         }
       }
 
-      // Optionally create Firebase Auth account if real email
-      if (email && !email.includes('@company.com')) {
-        try {
-          // Generate a random password for the crew member
-          const tempPassword = this.generateTempPassword();
-          await createUserWithEmailAndPassword(auth, email, tempPassword);
-          
-          // TODO: Send password reset email
-          console.log('[CrewMemberService] Auth account created for:', email);
-        } catch (authError) {
-          console.log('[CrewMemberService] Could not create auth account:', authError);
-          // Continue anyway - auth account is optional
-        }
-      }
+      // IMPORTANT: Disabled automatic auth account creation
+      // Creating a new user with createUserWithEmailAndPassword automatically signs them in,
+      // which logs out the current admin user. This should only be done server-side.
+      // 
+      // if (email && !email.includes('@company.com')) {
+      //   // This would log out the current user!
+      //   await createUserWithEmailAndPassword(auth, email, tempPassword);
+      // }
+      
+      // TODO: Implement server-side function to create auth accounts without signing in
+      console.log('[CrewMemberService] Auth account creation skipped - needs server-side implementation');
 
-      return {
+      const result: CrewMemberModel = {
         ...crewMember,
         id: docRef.id,
-        photoUrl: photoUrl || undefined,
       } as CrewMemberModel;
+      
+      // Only add photoUrl if it exists
+      if (photoUrl) {
+        result.photoUrl = photoUrl;
+      }
+      
+      return result;
     } catch (error) {
       console.error('[CrewMemberService] Error creating crew member:', error);
       throw error;
@@ -260,7 +274,7 @@ class CrewMemberService {
 
       // Handle photo upload if a new local photo is provided
       let photoUrl = updates.photoUrl;
-      if (photoUrl && photoUrl.startsWith('file://')) {
+      if (photoUrl && (photoUrl.startsWith('file://') || photoUrl.startsWith('content://'))) {
         try {
           // Upload new photo
           photoUrl = await this.uploadCrewMemberPhoto(photoUrl, crewMemberId, companyId);

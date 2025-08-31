@@ -142,6 +142,16 @@ function CustomDrawerContent(props: any) {
             style={[styles.drawerItem, styles.indentedItem]}
           />
           <DrawerItem
+            label="Crew Allocation"
+            icon={({ color, size }) => (
+              <MaterialCommunityIcons name="account-switch-outline" size={size} color={color} />
+            )}
+            onPress={() => props.navigation.navigate('crew-allocation')}
+            activeTintColor={theme.colors.primary}
+            inactiveTintColor={theme.colors.onSurfaceVariant}
+            style={[styles.drawerItem, styles.indentedItem]}
+          />
+          <DrawerItem
             label="Training Records"
             icon={({ color, size }) => (
               <MaterialCommunityIcons name="school-outline" size={size} color={color} />
@@ -298,6 +308,14 @@ export default function DrawerLayout() {
         name="crew-members"
         options={{
           title: 'Crew Member',
+          drawerItemStyle: { display: 'none' },
+        }}
+      />
+
+      <Drawer.Screen
+        name="crew-allocation"
+        options={{
+          title: 'Crew Allocation',
           drawerItemStyle: { display: 'none' },
         }}
       />

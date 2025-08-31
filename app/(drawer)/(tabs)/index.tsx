@@ -1,5 +1,5 @@
 import React from 'react';
-import { ScrollView, View, StyleSheet, Dimensions, TouchableOpacity } from 'react-native';
+import { ScrollView, View, StyleSheet, Dimensions, TouchableOpacity, Platform } from 'react-native';
 import {
   Surface,
   Text,
@@ -15,6 +15,7 @@ import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { haccpStyles } from '../../../theme/paperTheme';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { width } = Dimensions.get('window');
 
@@ -32,6 +33,7 @@ const moduleIcons = {
 export default function DashboardScreen() {
   const theme = useTheme();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   const quickAccessModules = [
     {
@@ -135,12 +137,13 @@ export default function DashboardScreen() {
   ];
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      {/* Welcome Header */}
-      <LinearGradient
-        colors={[theme.colors.primaryContainer, theme.colors.surface]}
-        style={styles.header}
-      >
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={['bottom']}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+        {/* Welcome Header */}
+        <LinearGradient
+          colors={[theme.colors.primaryContainer, theme.colors.surface]}
+          style={styles.header}
+        >
         <View style={styles.headerContent}>
           <View>
             <Text variant="headlineSmall" style={{ color: theme.colors.onPrimaryContainer }}>
@@ -298,15 +301,19 @@ export default function DashboardScreen() {
         </Card.Content>
       </Card>
 
-      {/* Bottom Spacing */}
-      <View style={{ height: 100 }} />
-    </ScrollView>
+        {/* Bottom Spacing */}
+        <View style={{ height: Platform.OS === 'android' ? 20 : 10 }} />
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: Platform.OS === 'android' ? 10 : 0,
   },
   header: {
     paddingTop: 20,

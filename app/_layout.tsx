@@ -11,6 +11,7 @@ import { PaperProvider } from 'react-native-paper';
 import { lightTheme, darkTheme } from '../theme/paperTheme';
 import { SCIProvider } from '../contexts/SCIContext';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 
 import { useColorScheme } from '@/hooks/useColorScheme';
 
@@ -82,6 +83,8 @@ export default function RootLayout() {
   const colorScheme = useColorScheme();
   const [loaded, error] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
+    ...MaterialCommunityIcons.font,
+    ...Ionicons.font,
   });
 
   console.log('[RootLayout] Font status:', { loaded, error });
