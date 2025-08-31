@@ -5,6 +5,7 @@ import { useAuth } from '../../../hooks/useAuth';
 import { auth } from '../../../firebase';
 import { signOut } from 'firebase/auth';
 import { useRouter } from 'expo-router';
+import { checkForAppUpdates, getUpdateInfo } from '../../../utils/checkForUpdates';
 
 export default function ProfileScreen() {
   const theme = useTheme();
@@ -65,6 +66,12 @@ export default function ProfileScreen() {
           title="Settings"
           left={() => <List.Icon icon="cog" />}
           onPress={() => {}}
+        />
+        <List.Item
+          title="Check for Updates"
+          description={`Channel: ${getUpdateInfo().channel || 'production'} | Version: ${getUpdateInfo().runtimeVersion || 'N/A'}`}
+          left={() => <List.Icon icon="cloud-download" />}
+          onPress={() => checkForAppUpdates(true)}
         />
       </List.Section>
 
