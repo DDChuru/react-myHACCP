@@ -6,6 +6,7 @@ import {
   Alert,
   ActivityIndicator,
   FlatList,
+  SafeAreaView,
 } from 'react-native';
 import {
   Text,
@@ -57,12 +58,15 @@ interface SimpleAllocation {
   createdBy: string;
 }
 
-// Site Area interface
+// Site Area interface - matching actual Firestore structure
 interface SiteArea {
   id: string;
-  areaName: string;
+  name: string; // Changed from areaName to name
   siteId: string;
+  barcode?: string;
   description?: string;
+  createdAt?: any;
+  updatedAt?: any;
   [key: string]: any;
 }
 
@@ -351,7 +355,7 @@ export default function CrewAllocationSimpleScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <Surface style={styles.header} elevation={2}>
         <Searchbar
           placeholder="Search crew or area..."
@@ -442,6 +446,7 @@ export default function CrewAllocationSimpleScreen() {
                   key={crew.id}
                   label={`${crew.fullName} ${crew.position ? `(${crew.position})` : ''}`}
                   value={crew.id}
+                  labelStyle={{ color: '#000000' }} // Ensure label is visible
                 />
               ))}
             </RadioButton.Group>
@@ -454,7 +459,7 @@ export default function CrewAllocationSimpleScreen() {
                   setFormData(prev => ({ 
                     ...prev, 
                     areaId: value,
-                    areaName: selectedArea?.areaName || ''
+                    areaName: selectedArea?.name || '' // Changed from areaName to name
                   }));
                 }}
                 value={formData.areaId || ''}
@@ -462,8 +467,9 @@ export default function CrewAllocationSimpleScreen() {
                 {siteAreas.map(area => (
                   <RadioButton.Item
                     key={area.id}
-                    label={`${area.areaName} ${area.description ? `- ${area.description}` : ''}`}
+                    label={`${area.name} ${area.barcode ? `(${area.barcode})` : ''}`} // Changed from areaName to name
                     value={area.id}
+                    labelStyle={{ color: '#000000' }} // Ensure label is visible
                   />
                 ))}
               </RadioButton.Group>
@@ -500,10 +506,10 @@ export default function CrewAllocationSimpleScreen() {
               onValueChange={value => setFormData(prev => ({ ...prev, assignmentType: value as any }))}
               value={formData.assignmentType || 'primary'}
             >
-              <RadioButton.Item label="Primary" value="primary" />
-              <RadioButton.Item label="Secondary" value="secondary" />
-              <RadioButton.Item label="Backup" value="backup" />
-              <RadioButton.Item label="Temporary" value="temporary" />
+              <RadioButton.Item label="Primary" value="primary" labelStyle={{ color: '#000000' }} />
+              <RadioButton.Item label="Secondary" value="secondary" labelStyle={{ color: '#000000' }} />
+              <RadioButton.Item label="Backup" value="backup" labelStyle={{ color: '#000000' }} />
+              <RadioButton.Item label="Temporary" value="temporary" labelStyle={{ color: '#000000' }} />
             </RadioButton.Group>
 
             <Text variant="labelLarge" style={styles.label}>Shift</Text>
@@ -511,10 +517,10 @@ export default function CrewAllocationSimpleScreen() {
               onValueChange={value => setFormData(prev => ({ ...prev, shift: value as any }))}
               value={formData.shift || 'morning'}
             >
-              <RadioButton.Item label="Morning" value="morning" />
-              <RadioButton.Item label="Afternoon" value="afternoon" />
-              <RadioButton.Item label="Night" value="night" />
-              <RadioButton.Item label="Rotating" value="rotating" />
+              <RadioButton.Item label="Morning" value="morning" labelStyle={{ color: '#000000' }} />
+              <RadioButton.Item label="Afternoon" value="afternoon" labelStyle={{ color: '#000000' }} />
+              <RadioButton.Item label="Night" value="night" labelStyle={{ color: '#000000' }} />
+              <RadioButton.Item label="Rotating" value="rotating" labelStyle={{ color: '#000000' }} />
             </RadioButton.Group>
 
             <TextInput
@@ -547,7 +553,7 @@ export default function CrewAllocationSimpleScreen() {
           </ScrollView>
         </Modal>
       </Portal>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -669,7 +675,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     margin: 16,
     right: 0,
-    bottom: 0,
+    bottom: 16, // Add proper bottom spacing for safe area
   },
   modal: {
     backgroundColor: '#ffffff',
@@ -681,10 +687,13 @@ const styles = StyleSheet.create({
   modalTitle: {
     marginBottom: 20,
     fontWeight: 'bold',
+    color: '#000000', // Ensure text is black
   },
   label: {
     marginTop: 16,
     marginBottom: 8,
+    color: '#000000', // Ensure label is black
+    fontWeight: '600',
   },
   input: {
     marginTop: 8,
