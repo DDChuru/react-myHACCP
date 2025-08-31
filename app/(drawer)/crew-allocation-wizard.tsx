@@ -288,7 +288,7 @@ export default function CrewAllocationWizardScreen() {
       case 'choose-mode':
         return (
           <View style={styles.wizardContent}>
-            <Text variant="bodyLarge" style={styles.instructionText}>
+            <Text style={styles.instructionText}>
               How would you like to create allocations?
             </Text>
             
@@ -303,12 +303,12 @@ export default function CrewAllocationWizardScreen() {
                 <MaterialCommunityIcons 
                   name="account-arrow-right" 
                   size={48} 
-                  color={allocationMode === 'crew-to-areas' ? theme.colors.primary : theme.colors.onSurface}
+                  color={allocationMode === 'crew-to-areas' ? '#6200ee' : '#333333'}
                 />
-                <Text variant="titleMedium" style={styles.modeTitle}>
+                <Text style={styles.modeTitle}>
                   Assign Crew to Areas
                 </Text>
-                <Text variant="bodySmall" style={styles.modeDescription}>
+                <Text style={styles.modeDescription}>
                   Select crew members first, then assign them to multiple areas
                 </Text>
               </Card.Content>
@@ -325,19 +325,19 @@ export default function CrewAllocationWizardScreen() {
                 <MaterialCommunityIcons 
                   name="map-marker-multiple" 
                   size={48} 
-                  color={allocationMode === 'area-to-crews' ? theme.colors.primary : theme.colors.onSurface}
+                  color={allocationMode === 'area-to-crews' ? '#6200ee' : '#333333'}
                 />
-                <Text variant="titleMedium" style={styles.modeTitle}>
+                <Text style={styles.modeTitle}>
                   Assign Areas to Crew
                 </Text>
-                <Text variant="bodySmall" style={styles.modeDescription}>
+                <Text style={styles.modeDescription}>
                   Select areas first, then assign multiple crew members to them
                 </Text>
               </Card.Content>
             </Card>
             
             {allocationMode && (
-              <Text variant="bodySmall" style={styles.selectionHint}>
+              <Text style={styles.selectionHint}>
                 ✓ {allocationMode === 'crew-to-areas' ? 'Crew to Areas' : 'Areas to Crew'} selected
               </Text>
             )}
@@ -352,8 +352,13 @@ export default function CrewAllocationWizardScreen() {
           const name = isPrimaryCrewSelection 
             ? (item as CrewMemberModel).fullName 
             : (item as SiteArea).name;
-          return name.toLowerCase().includes(searchQuery.toLowerCase());
+          return name?.toLowerCase().includes(searchQuery.toLowerCase()) ?? true;
         });
+        
+        // Debug log to check area data
+        if (!isPrimaryCrewSelection && filteredPrimary.length > 0) {
+          console.log('Area data sample:', filteredPrimary[0]);
+        }
 
         return (
           <View style={styles.wizardContent}>
@@ -381,16 +386,18 @@ export default function CrewAllocationWizardScreen() {
                 return (
                   <List.Item
                     key={item.id}
-                    title={name}
-                    description={subtitle}
+                    title={name || 'Unnamed'}
+                    titleStyle={{ color: '#000000', fontSize: 16 }}
+                    description={subtitle || ''}
+                    descriptionStyle={{ color: '#666666', fontSize: 14 }}
                     left={props => isPrimaryCrewSelection ? (
                       <Avatar.Text 
                         {...props} 
                         size={40} 
-                        label={name.split(' ').map(n => n[0]).join('')}
+                        label={name ? name.split(' ').map(n => n[0]).join('') : '?'}
                       />
                     ) : (
-                      <List.Icon {...props} icon="map-marker" />
+                      <List.Icon {...props} icon="map-marker" color="#666666" />
                     )}
                     right={() => (
                       <Checkbox
@@ -460,16 +467,18 @@ export default function CrewAllocationWizardScreen() {
                 return (
                   <List.Item
                     key={item.id}
-                    title={name}
-                    description={subtitle}
+                    title={name || 'Unnamed'}
+                    titleStyle={{ color: '#000000', fontSize: 16 }}
+                    description={subtitle || ''}
+                    descriptionStyle={{ color: '#666666', fontSize: 14 }}
                     left={props => isSecondaryCrewSelection ? (
                       <Avatar.Text 
                         {...props} 
                         size={40} 
-                        label={name.split(' ').map(n => n[0]).join('')}
+                        label={name ? name.split(' ').map(n => n[0]).join('') : '?'}
                       />
                     ) : (
-                      <List.Icon {...props} icon="map-marker" />
+                      <List.Icon {...props} icon="map-marker" color="#666666" />
                     )}
                     right={() => (
                       <Checkbox
@@ -830,14 +839,19 @@ const styles = StyleSheet.create({
   // Wizard styles
   wizardModal: {
     margin: 20,
-    flex: 1,
     justifyContent: 'center',
   },
   wizardContainer: {
     backgroundColor: '#ffffff',
     borderRadius: 12,
-    maxHeight: '80%',
+    maxHeight: 600,
+    minHeight: 400,
     overflow: 'hidden',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
   },
   wizardHeader: {
     flexDirection: 'row',
@@ -860,10 +874,14 @@ const styles = StyleSheet.create({
   },
   wizardScrollContent: {
     flexGrow: 1,
+    paddingBottom: 20,
   },
   wizardContent: {
+    flex: 1,
     paddingHorizontal: 16,
+    paddingTop: 8,
     paddingBottom: 16,
+    minHeight: 300,
   },
   wizardFooter: {
     flexDirection: 'row',
@@ -882,31 +900,37 @@ const styles = StyleSheet.create({
   instructionText: {
     textAlign: 'center',
     marginBottom: 16,
-    color: '#666',
+    color: '#333',
     fontSize: 14,
   },
   modeCard: {
     marginBottom: 12,
-    elevation: 1,
+    elevation: 2,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
   },
   selectedCard: {
     borderWidth: 2,
     borderColor: '#6200ee',
+    backgroundColor: '#f5f0ff',
   },
   modeCardContent: {
     alignItems: 'center',
     paddingVertical: 16,
     paddingHorizontal: 12,
+    backgroundColor: 'transparent',
   },
   modeTitle: {
     marginTop: 8,
     marginBottom: 4,
-    color: '#000',
+    color: '#000000',
     fontSize: 16,
+    fontWeight: '600',
   },
   modeDescription: {
     textAlign: 'center',
-    color: '#666',
+    color: '#555555',
     fontSize: 12,
   },
   selectionHint: {
